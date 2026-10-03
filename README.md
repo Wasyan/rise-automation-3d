@@ -4,10 +4,12 @@
 
 ---
 
-## 🌐 Ссылка для запуска
+## 🌐 Ссылки для игры
 
-- **В браузере (локальный сервер активен):** [http://localhost:8000](http://localhost:8000)
-- **Файл проекта:** `C:\Users\vasya\.gemini\antigravity\scratch\rise_automation_game\index.html`
+- **🚀 Играть онлайн (работает 24/7 с любого устройства, телефона или ПК):**
+  👉 **[https://wasyan.github.io/rise-automation-3d/](https://wasyan.github.io/rise-automation-3d/)**
+- **💻 Локальный сервер:** [http://localhost:8000](http://localhost:8000)
+- **📦 Автономная версия:** файл `rise_automation_standalone.html` или архив `rise_automation_3d.zip` (работают без интернета и серверов простым двойным кликом).
 
 ---
 
