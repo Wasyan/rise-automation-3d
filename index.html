@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rise Automation: Защита Робота 3D</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (typeof tailwind === 'undefined') {
+      document.write('<script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"><\/script>');
+    }
+  </script>
+  <script src="three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700;900&family=Inter:wght@400;600;800&display=swap');
+    
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+    }
+    .font-tech {
+      font-family: 'Chakra Petch', monospace, sans-serif;
+    }
+    .crt-overlay {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+    .glow-orange {
+      box-shadow: 0 0 25px rgba(249, 115, 22, 0.5);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.5);
+    }
+    .glow-indigo {
+      box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
+    }
+    .glow-red {
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.7);
+    }
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.02); }
+    }
+    .animate-pulse-fast {
+      animation: pulse-fast 1.2s infinite ease-in-out;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    /* Floating 3D label styles */
+    .world-label {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      pointer-events: none;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-start p-2 sm:p-4">
+
+  <!-- Header & Rise Automation Brand Bar -->
+  <header class="w-full max-w-6xl mb-3 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 rounded-2xl px-5 py-3 shadow-xl backdrop-blur-md">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-700 flex items-center justify-center shadow-lg shadow-orange-500/30 border border-orange-400/40">
+        <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-tech text-xl sm:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-cyan-400">
+            RISE AUTOMATION 3D
+          </span>
+          <span class="text-xs font-mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+            3D ENGINE • ТАКТИЧЕСКИЙ РЕЖИМ
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 font-medium">Монтажники анкерят заборы • Программисты заряжают способности • Андрей отводит рабочих</p>
+      </div>
+    </div>
+
+    <!-- Quick Stats in Header -->
+    <div class="flex items-center gap-3 text-sm font-tech">
+      <div class="flex items-center gap-2 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-1.5">
+        <span class="text-slate-400 text-xs">ВОЛНА:</span>
+        <span id="ui-wave" class="text-orange-400 font-bold text-base">1 / 5</span>
+      </div>
+      <div class="flex items-center gap-2 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-1.5">
+        <span class="text-slate-400 text-xs">ПРЕТЕНЗИИ:</span>
+        <span id="ui-enemies" class="text-cyan-400 font-bold text-base">0</span>
+      </div>
+      <button id="btn-audio" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors" title="Вкл/Выкл Звук">
+        <svg id="icon-sound-on" class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+        </svg>
+        <svg id="icon-sound-off" class="w-5 h-5 text-rose-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Game Container -->
+  <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+    
+    <!-- Left / Center: Interactive 3D Arena (3 cols on large) -->
+    <div class="lg:col-span-3 flex flex-col gap-3">
+      
+      <!-- Top Status Bars -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3 shadow-lg">
+        <!-- Robot Integrity -->
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between items-center text-xs font-mono">
+            <span class="text-cyan-300 font-bold flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+              РОБОТ RISE AUTOMATION
+            </span>
+            <span id="ui-robot-hp-text" class="text-cyan-400 font-bold">100%</span>
+          </div>
+          <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-700/60">
+            <div id="ui-robot-hp-bar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-300" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Super Points Bar -->
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between items-center text-xs font-mono">
+            <span class="text-amber-400 font-bold flex items-center gap-1.5">
+              ⚡ СУПЕР-ОЧКИ ИЛЬИ И ВАСИ
+            </span>
+            <span id="ui-super-points-text" class="text-amber-300 font-bold">0 / 450</span>
+          </div>
+          <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-700/60">
+            <div id="ui-super-bar" class="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-200" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Distraction Intensity Status -->
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between items-center text-xs font-mono">
+            <span class="text-purple-300 font-bold flex items-center gap-1.5">
+              💬 ОТВЛЕЧЕНИЕ МОНТАЖНИКОВ
+            </span>
+            <span id="ui-distraction-status" class="text-emerald-400 font-bold">РАБОТАЮТ (0%)</span>
+          </div>
+          <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-700/60">
+            <div id="ui-distraction-bar" class="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-200" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3D Viewport Frame -->
+      <div id="canvas-container" class="relative w-full aspect-[16/10] bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl group">
+        <!-- Three.js Canvas will be inserted here -->
+        <div id="labels-container" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
+        <div class="crt-overlay absolute inset-0 pointer-events-none z-10"></div>
+
+        <!-- Boss Alert Overlay -->
+        <div id="overlay-boss" class="absolute inset-0 bg-red-950/60 backdrop-blur-sm hidden flex-col items-center justify-center p-6 text-center animate-pulse-fast pointer-events-none z-20">
+          <div class="bg-red-900/90 border-2 border-red-500 px-8 py-5 rounded-2xl glow-red shadow-2xl">
+            <div class="text-yellow-300 font-tech text-3xl font-black tracking-widest uppercase mb-1">
+              ⚠️ ТРЕВОГА! ЕДЕТ КОМИССИЯ! ⚠️
+            </div>
+            <p class="text-white text-base font-semibold">Генеральный директор на спецтехнике сносит заборы!</p>
+            <p class="text-red-200 text-sm mt-1">Боссы игнорируют Андрея! Чините заборы и применяйте суперспособности!</p>
+          </div>
+        </div>
+
+        <!-- Modal Overlays -->
+        <div id="game-modal" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30">
+          <div class="max-w-md w-full bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-orange-500/20 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div id="modal-content-start">
+              <div class="inline-block p-3 rounded-2xl bg-orange-500/20 border border-orange-500/40 text-orange-400 mb-3">
+                <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <h2 class="text-2xl font-tech font-black text-white mb-2 tracking-wide">
+                RISE AUTOMATION 3D
+              </h2>
+              <p class="text-slate-300 text-sm mb-4 leading-relaxed">
+                Рабочие с претензиями штурмуют цех!<br>
+                <b class="text-amber-400">Семён</b> носит заборы, <b class="text-orange-400">Данил</b> анкерит перфоратором, <b class="text-cyan-400">Саша</b> монтирует секции.<br>
+                <b class="text-purple-400">Илья и Вася</b> копят очки способностей, а <b class="text-indigo-400">Андрей</b> уводит рабочих за пределы ограждений на переговоры и пиццу!
+              </p>
+              <div class="text-xs bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-slate-400 mb-5 text-left space-y-1.5">
+                <div>🎮 <b>3D Графика:</b> полностью трёхмерный цех, робот, техника и персонажи.</div>
+                <div>🤝 <b>Андрей с кулдауном:</b> уводит рабочих за ограждения, но бежит от боссов!</div>
+                <div>🛡️ <b>Тактический темп:</b> супер-очки копятся умеренно — критически важно вовремя чинить и ставить заборы!</div>
+              </div>
+              <button id="btn-start-game" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-400 hover:to-amber-500 text-slate-950 font-tech font-black text-lg tracking-wider shadow-lg shadow-orange-500/40 transition-all transform active:scale-95">
+                ЗАСТУПИТЬ НА СМЕНУ!
+              </button>
+            </div>
+
+            <div id="modal-content-gameover" class="hidden">
+              <div class="inline-block p-3 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 mb-3">
+                <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 class="text-2xl font-tech font-black text-rose-400 mb-2">РОБОТ ПОВРЕЖДЁН!</h2>
+              <p class="text-slate-300 text-sm mb-4 leading-relaxed">
+                Рабочие с претензиями прорвали ограждения и сорвали запуск. Илья, Вася и Андрей пишут объяснительную в Jira...
+              </p>
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-sm mb-4">
+                <div class="flex justify-between text-slate-400">
+                  <span>Отражено претензий:</span>
+                  <span id="stat-gameover-kills" class="text-white font-bold">0</span>
+                </div>
+                <div class="flex justify-between text-slate-400">
+                  <span>Пройдено волн:</span>
+                  <span id="stat-gameover-wave" class="text-orange-400 font-bold">1</span>
+                </div>
+              </div>
+              <button id="btn-restart-gameover" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-400 hover:to-orange-400 text-white font-tech font-black text-lg tracking-wider shadow-lg shadow-rose-500/30 transition-all">
+                ПОПРОБОВАТЬ СНОВА
+              </button>
+            </div>
+
+            <div id="modal-content-victory" class="hidden">
+              <div class="inline-block p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 mb-3">
+                <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+              </div>
+              <h2 class="text-2xl font-tech font-black text-emerald-400 mb-2">ПОБЕДА RISE AUTOMATION!</h2>
+              <p class="text-slate-300 text-sm mb-4 leading-relaxed">
+                Комиссия во главе с гендиректором впечатлена надёжностью заборов и дипломатией Андрея! Акт подписан, вся бригада получает премию!
+              </p>
+              <button id="btn-endless-mode" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-tech font-black text-lg tracking-wider shadow-lg shadow-emerald-500/30 transition-all">
+                БЕСКОНЕЧНЫЙ РЕЖИМ (СВЕРХУРОЧНЫЕ)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distraction Control Bar -->
+      <div class="bg-gradient-to-r from-slate-900 via-purple-950/40 to-slate-900 border border-purple-800/40 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300 font-tech font-bold text-xl">
+            💻
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-tech text-base font-bold text-purple-200">ИЛЬЯ & ВАСЯ: МЕХАНИКА ОТВЛЕЧЕНИЯ</span>
+              <span id="badge-distract" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700">ОТКЛЮЧЕНО</span>
+            </div>
+            <p class="text-xs text-slate-400">
+              Пока монтажники отвлечены, заборы <span class="text-rose-400 font-bold">не строятся</span>, но очки способностей копятся <span class="text-amber-400 font-bold">быстрее</span>.
+            </p>
+          </div>
+        </div>
+
+        <button id="btn-toggle-distract" class="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-tech font-black tracking-wider shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 transform active:scale-95">
+          <span id="distract-btn-icon">💬</span>
+          <span id="distract-btn-label">ОТВЛЕЧЬ МОНТАЖНИКОВ НА КОД-РЕВЬЮ!</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Super Abilities, Team Status & Field Guide -->
+    <div class="flex flex-col gap-3">
+
+      <!-- Super Abilities Deck (With Andrey Cooldown) -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-tech text-sm font-bold text-amber-400 flex items-center gap-2">
+            <span>⚡</span> СУПЕРСПОСОБНОСТИ
+          </h3>
+          <span class="text-xs font-mono text-slate-400">Копят Илья & Вася</span>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <!-- Ability 1: Hotfix -->
+          <button id="btn-skill-1" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">1. Срочный Хотфикс в Прод</span>
+              <span class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">120 pts</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-tight">Оглушает всех рабочих на 6 сек ошибками 404.</p>
+          </button>
+
+          <!-- Ability 2: Andrey with Cooldown -->
+          <button id="btn-skill-andrey" class="w-full text-left p-2.5 rounded-xl bg-gradient-to-r from-indigo-950/70 to-purple-950/50 hover:from-indigo-900/70 hover:to-purple-900/70 border border-indigo-700/60 hover:border-indigo-400 transition-all disabled:opacity-40 disabled:pointer-events-none group relative overflow-hidden">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-xs text-indigo-300 group-hover:text-indigo-200 transition-colors flex items-center gap-1.5">
+                <span>🤝</span> 2. Призвать Андрея
+              </span>
+              <span id="badge-andrey-cost" class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/40">180 pts</span>
+            </div>
+            <p id="label-andrey-desc" class="text-[11px] text-slate-300 leading-tight">
+              Андрей выходит за периметр на 15 сек и уводит рабочих за собой на пиццу! (Кулдаун 25 сек). Боссы не реагируют.
+            </p>
+            <div id="andrey-cooldown-bar" class="absolute bottom-0 left-0 h-1 bg-indigo-400 transition-all duration-300" style="width: 0%;"></div>
+          </button>
+
+          <!-- Ability 3: Safety Siren -->
+          <button id="btn-skill-2" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">3. Сирена Охраны Труда</span>
+              <span class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">260 pts</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-tight">Эвакуация по громкой связи! Половина рабочих в панике убегает.</p>
+          </button>
+
+          <!-- Ability 4: Robot Pulse -->
+          <button id="btn-skill-3" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">4. Разгон Робота Rise</span>
+              <span class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">350 pts</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-tight">Робот выпускает круговой импульс автоматизации, сметая толпы рабочих!</p>
+          </button>
+
+          <!-- Ability 5: Signed Acceptance Act -->
+          <button id="btn-skill-4" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">5. Акт Приемки с Печатью</span>
+              <span class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">450 pts</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-tight">Бюрократический нокаут! Сносит 45% HP технике босса и глушит её на 7 сек!</p>
+          </button>
+        </div>
+      </div>
+
+      <!-- Rise Automation Team Status -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <h3 class="font-tech text-xs font-bold text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <span>👷‍♂️</span> Бригада Rise Automation
+        </h3>
+        <div class="space-y-2 text-xs">
+          <div class="p-2 rounded-xl bg-slate-950/60 border border-slate-800/70 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-orange-300">Данил (Монтажник)</div>
+              <div class="text-[11px] text-slate-400">Перфоратор, анкерит отверстия</div>
+            </div>
+            <span id="status-danil" class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">В строю</span>
+          </div>
+
+          <div class="p-2 rounded-xl bg-slate-950/60 border border-slate-800/70 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-amber-300">Семён (Снабжение)</div>
+              <div class="text-[11px] text-slate-400">Таскает заборы со склада</div>
+            </div>
+            <span id="status-semyon" class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">Несёт забор</span>
+          </div>
+
+          <div class="p-2 rounded-xl bg-slate-950/60 border border-slate-800/70 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-cyan-300">Саша (Монтажник)</div>
+              <div class="text-[11px] text-slate-400">Устанавливает заборы в анкеры</div>
+            </div>
+            <span id="status-sasha" class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">Монтаж</span>
+          </div>
+
+          <div class="p-2 rounded-xl bg-purple-950/20 border border-purple-800/40 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-purple-300">Илья & Вася (Программисты)</div>
+              <div class="text-[11px] text-slate-400">Код, кофе, отвлечение команды</div>
+            </div>
+            <span id="status-devs" class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">Кодят</span>
+          </div>
+
+          <div class="p-2 rounded-xl bg-indigo-950/30 border border-indigo-800/40 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-indigo-300">Андрей (Тимлид / Дипломатия)</div>
+              <div class="text-[11px] text-slate-400">Уводит рабочих за ограждения</div>
+            </div>
+            <span id="status-andrey" class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">В резерве</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Upgrades / Shop -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-tech text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span>⚙️</span> Улучшения Цеха
+          </h3>
+          <span id="ui-funds" class="font-mono text-xs text-emerald-400 font-bold">💰 100 руб</span>
+        </div>
+        <div class="space-y-1.5">
+          <button id="btn-upg-drill" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
+            <div>
+              <div class="font-bold text-slate-200">Турбо-бур Данила</div>
+              <div class="text-[10px] text-slate-400">+50% скорость бурения</div>
+            </div>
+            <span id="cost-upg-drill" class="font-mono text-[11px] text-emerald-400 font-bold">100 руб</span>
+          </button>
+
+          <button id="btn-upg-fence" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
+            <div>
+              <div class="font-bold text-slate-200">Усиленный профиль заборов</div>
+              <div class="text-[10px] text-slate-400">+60% прочность заборов</div>
+            </div>
+            <span id="cost-upg-fence" class="font-mono text-[11px] text-emerald-400 font-bold">120 руб</span>
+          </button>
+
+          <button id="btn-upg-coffee" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
+            <div>
+              <div class="font-bold text-slate-200">Кофемашина для Ильи и Васи</div>
+              <div class="text-[10px] text-slate-400">+40% к супер-очкам</div>
+            </div>
+            <span id="cost-upg-coffee" class="font-mono text-[11px] text-emerald-400 font-bold">140 руб</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Complete 3D Engine & Game Logic Script -->
+  <script>
+    // ==========================================
+    // SOUND FX SYNTHESIZER
+    // ==========================================
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playDrill() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(105 + Math.random() * 30, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(70, this.ctx.currentTime + 0.18);
+          gain.gain.setValueAtTime(0.07, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.18);
+        } catch(e) {}
+      }
+      playClank() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(550, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.15);
+        } catch(e) {}
+      }
+      playLaser() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(900, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.35);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.35);
+        } catch(e) {}
+      }
+      playSiren() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 0.3);
+          osc.frequency.linearRampToValueAtTime(400, this.ctx.currentTime + 0.6);
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.7);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.7);
+        } catch(e) {}
+      }
+      playChatter() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(320 + Math.random() * 150, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.09);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.09);
+        } catch(e) {}
+      }
+      playBossRoar() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(85, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(45, this.ctx.currentTime + 0.9);
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.9);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.9);
+        } catch(e) {}
+      }
+      playChime() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+          osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.12);
+          osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.24);
+          gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.55);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.55);
+        } catch(e) {}
+      }
+    }
+
+    const sfx = new SoundFX();
+
+    // ==========================================
+    // THREE.JS 3D WORLD SETUP
+    // ==========================================
+    const container = document.getElementById('canvas-container');
+    const labelsContainer = document.getElementById('labels-container');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070b14);
+    scene.fog = new THREE.FogExp2(0x070b14, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 1000);
+    camera.position.set(0, 48, 52);
+    camera.lookAt(0, 0, 2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+      if (!container) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // Factory Floor Lighting
+    const ambientLight = new THREE.AmbientLight(0x1e293b, 0.9);
+    scene.add(ambientLight);
+
+    const mainLight = new THREE.DirectionalLight(0xfff7ed, 1.1);
+    mainLight.position.set(30, 60, 40);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 1024;
+    mainLight.shadow.mapSize.height = 1024;
+    mainLight.shadow.camera.near = 10;
+    mainLight.shadow.camera.far = 150;
+    mainLight.shadow.camera.left = -40;
+    mainLight.shadow.camera.right = 40;
+    mainLight.shadow.camera.top = 40;
+    mainLight.shadow.camera.bottom = -40;
+    scene.add(mainLight);
+
+    const robotCoreLight = new THREE.PointLight(0x00e5ff, 2.0, 35);
+    robotCoreLight.position.set(0, 4, 0);
+    scene.add(robotCoreLight);
+
+    // Floor Mesh with Grid & Markings
+    const floorGeo = new THREE.PlaneGeometry(120, 100);
+    const floorMat = new THREE.MeshStandardMaterial({ 
+      color: 0x0f172a, 
+      roughness: 0.85, 
+      metalness: 0.25 
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Grid lines on floor
+    const gridHelper = new THREE.GridHelper(100, 25, 0x334155, 0x1e293b);
+    gridHelper.position.y = 0.05;
+    scene.add(gridHelper);
+
+    // Factory Safety Zone Ring around Robot
+    const ringGeo = new THREE.RingGeometry(18.5, 19.0, 48);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide });
+    const safetyRing = new THREE.Mesh(ringGeo, ringMat);
+    safetyRing.rotation.x = -Math.PI / 2;
+    safetyRing.position.y = 0.08;
+    scene.add(safetyRing);
+
+    // Outer boundary markings
+    const outerRingGeo = new THREE.RingGeometry(34, 34.5, 48);
+    const outerRingMat = new THREE.MeshBasicMaterial({ color: 0x6366f1, side: THREE.DoubleSide, opacity: 0.35, transparent: true });
+    const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
+    outerRing.rotation.x = -Math.PI / 2;
+    outerRing.position.y = 0.08;
+    scene.add(outerRing);
+
+    // ==========================================
+    // 3D MODELS BUILDER
+    // ==========================================
+    
+    // 1. Central Robot Arm Assembly
+    const robotGroup = new THREE.Group();
+    // Base pedestal
+    const pedGeo = new THREE.CylinderGeometry(4.5, 5.5, 1.8, 16);
+    const pedMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
+    const pedestal = new THREE.Mesh(pedGeo, pedMat);
+    pedestal.position.y = 0.9;
+    pedestal.castShadow = true;
+    robotGroup.add(pedestal);
+
+    // Turntable
+    const turnGeo = new THREE.CylinderGeometry(3.2, 3.2, 0.8, 16);
+    const turnMat = new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.5, roughness: 0.4 });
+    const turntable = new THREE.Mesh(turnGeo, turnMat);
+    turntable.position.y = 2.1;
+    robotGroup.add(turntable);
+
+    // Arm Segment 1
+    const arm1Geo = new THREE.BoxGeometry(1.4, 5.5, 1.4);
+    const arm1Mat = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.4, roughness: 0.3 });
+    const arm1 = new THREE.Mesh(arm1Geo, arm1Mat);
+    arm1.position.set(0, 4.5, 0);
+    arm1.castShadow = true;
+    turntable.add(arm1);
+
+    // Arm Segment 2
+    const arm2Geo = new THREE.BoxGeometry(1.1, 4.8, 1.1);
+    const arm2Mat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.6, roughness: 0.2 });
+    const arm2 = new THREE.Mesh(arm2Geo, arm2Mat);
+    arm2.position.set(0, 4.5, 0);
+    arm2.castShadow = true;
+    arm1.add(arm2);
+
+    // Tool Gripper / Core
+    const gripGeo = new THREE.BoxGeometry(2.0, 0.8, 2.0);
+    const gripMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00e5ff, emissiveIntensity: 0.6 });
+    const gripper = new THREE.Mesh(gripGeo, gripMat);
+    gripper.position.y = 2.6;
+    arm2.add(gripper);
+
+    scene.add(robotGroup);
+
+    // 2. Programmers Station (Desk, Monitors, Chairs)
+    const progStationGroup = new THREE.Group();
+    progStationGroup.position.set(0, 0, 7.5);
+
+    const deskGeo = new THREE.BoxGeometry(10, 1.6, 3.5);
+    const deskMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+    const desk = new THREE.Mesh(deskGeo, deskMat);
+    desk.position.y = 0.8;
+    desk.castShadow = true;
+    progStationGroup.add(desk);
+
+    // Dual Monitors
+    const monGeo = new THREE.BoxGeometry(2.6, 1.6, 0.3);
+    const mon1Mat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+    const mon1 = new THREE.Mesh(monGeo, mon1Mat);
+    mon1.position.set(-2.5, 2.2, -0.6);
+    progStationGroup.add(mon1);
+
+    const mon2Mat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+    const mon2 = new THREE.Mesh(monGeo, mon2Mat);
+    mon2.position.set(2.5, 2.2, -0.6);
+    progStationGroup.add(mon2);
+
+    scene.add(progStationGroup);
+
+    // 3. Warehouse (Storage Depot in bottom-left)
+    const warehouseGroup = new THREE.Group();
+    warehouseGroup.position.set(-32, 0, 20);
+
+    const whFloorGeo = new THREE.BoxGeometry(12, 0.4, 10);
+    const whFloorMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+    const whFloor = new THREE.Mesh(whFloorGeo, whFloorMat);
+    whFloor.position.y = 0.2;
+    warehouseGroup.add(whFloor);
+
+    // Stacked Fence Panels on Pallet
+    for (let i = 0; i < 4; i++) {
+      const pGeo = new THREE.BoxGeometry(6, 1.8, 0.4);
+      const pMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7 });
+      const panel = new THREE.Mesh(pGeo, pMat);
+      panel.position.set(-1 + i * 0.4, 1.2 + i * 0.4, -1 + i * 0.5);
+      panel.rotation.y = 0.2;
+      warehouseGroup.add(panel);
+    }
+    scene.add(warehouseGroup);
+
+    // Helper: Create 3D Character Mesh
+    function createCharacter3D(vestColor = 0x0284c7, helmetColor = 0xfbbf24, toolType = null) {
+      const group = new THREE.Group();
+
+      // Body (Torso in Rise jumpsuit)
+      const bodyGeo = new THREE.CylinderGeometry(0.9, 0.8, 2.2, 10);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: vestColor, roughness: 0.6 });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 1.6;
+      body.castShadow = true;
+      group.add(body);
+
+      // High-vis Orange Safety Belt
+      const beltGeo = new THREE.CylinderGeometry(0.92, 0.92, 0.5, 10);
+      const beltMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.4 });
+      const belt = new THREE.Mesh(beltGeo, beltMat);
+      belt.position.y = 1.6;
+      group.add(belt);
+
+      // Head / Helmet
+      const headGeo = new THREE.SphereGeometry(0.65, 12, 12);
+      const headMat = new THREE.MeshStandardMaterial({ color: helmetColor, roughness: 0.3 });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.y = 3.2;
+      head.castShadow = true;
+      group.add(head);
+
+      // Tool holding
+      if (toolType === "PERFORATOR") {
+        const perfGeo = new THREE.BoxGeometry(0.5, 0.5, 1.8);
+        const perfMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 });
+        const drill = new THREE.Mesh(perfGeo, perfMat);
+        drill.position.set(0.8, 1.5, 0.8);
+        group.add(drill);
+      } else if (toolType === "FENCE") {
+        const fGeo = new THREE.BoxGeometry(3.5, 1.6, 0.2);
+        const fMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7 });
+        const carriedFence = new THREE.Mesh(fGeo, fMat);
+        carriedFence.position.set(0, 1.8, 0.9);
+        group.add(carriedFence);
+      } else if (toolType === "PIZZA") {
+        const pzGeo = new THREE.BoxGeometry(1.6, 0.3, 1.6);
+        const pzMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
+        const pizza = new THREE.Mesh(pzGeo, pzMat);
+        pizza.position.set(0.7, 1.8, 0.7);
+        group.add(pizza);
+      }
+
+      return group;
+    }
+
+    // Helper: Create 3D Fence Model
+    function createFence3D() {
+      const group = new THREE.Group();
+
+      // Posts (2 steel vertical posts)
+      const postGeo = new THREE.CylinderGeometry(0.18, 0.25, 2.8, 8);
+      const postMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
+      
+      const post1 = new THREE.Mesh(postGeo, postMat);
+      post1.position.set(-2.8, 1.4, 0);
+      post1.castShadow = true;
+      group.add(post1);
+
+      const post2 = new THREE.Mesh(postGeo, postMat);
+      post2.position.set(2.8, 1.4, 0);
+      post2.castShadow = true;
+      group.add(post2);
+
+      // Top Safety Bar (Bright Orange)
+      const topBarGeo = new THREE.BoxGeometry(6.0, 0.3, 0.3);
+      const topBarMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.3 });
+      const topBar = new THREE.Mesh(topBarGeo, topBarMat);
+      topBar.position.y = 2.6;
+      group.add(topBar);
+
+      // Steel Safety Mesh Panel
+      const meshGeo = new THREE.BoxGeometry(5.4, 2.0, 0.15);
+      const meshMat = new THREE.MeshStandardMaterial({ 
+        color: 0x38bdf8, 
+        metalness: 0.6, 
+        roughness: 0.4,
+        transparent: true,
+        opacity: 0.85
+      });
+      const meshPanel = new THREE.Mesh(meshGeo, meshMat);
+      meshPanel.position.y = 1.3;
+      meshPanel.castShadow = true;
+      group.add(meshPanel);
+
+      return group;
+    }
+
+    // ==========================================
+    // GAME CORE CONFIG & STATE
+    // ==========================================
+    const state = {
+      running: false,
+      paused: false,
+      wave: 1,
+      maxWaves: 5,
+      waveSpawning: false,
+      enemiesToSpawn: [],
+      kills: 0,
+      funds: 100,
+
+      robotHp: 1500,
+      robotMaxHp: 1500,
+      superPoints: 0,
+      superPointsMax: 450,
+      
+      isDistracted: false,
+      distractionTimer: 0,
+
+      // Upgrades
+      drillSpeedMult: 1.0,
+      fenceHpMult: 1.0,
+      superPointMult: 1.0,
+      costDrill: 100,
+      costFence: 120,
+      costCoffee: 140,
+
+      // Andrey Cooldown
+      andreyCooldown: 0,
+      andreyCooldownMax: 25, // 25 seconds cooldown
+
+      fences: [],
+      enemies: [],
+      particles: [],
+      speechBubbles: [],
+
+      danil: null,
+      semyon: null,
+      sasha: null,
+      andrey: null, // Active summoned Andrey instance
+
+      screenShake: 0
+    };
+
+    // Quotes
+    const QUOTES_WORKERS = [
+      "Где премия за квартал?!",
+      "Кто согласовал этого робота?!",
+      "Верните ручной труд!",
+      "Станок шумит выше нормы!",
+      "Переработку не оплатили!",
+      "Где молоко за вредность?!",
+      "Нам не нужны эти алгоритмы!",
+      "Я здесь 25 лет работаю!",
+      "Кто главный?! Позовите начальство!"
+    ];
+
+    const QUOTES_ANDREY_RALLY = [
+      "Коллеги, за мной! Пицца уже на столах!",
+      "Срочный синк за пределами цеха!",
+      "Вынесем все претензии за скобки!",
+      "Все вопросы на ретроспективе обсудим!",
+      "Я уже согласовал всем овертайм!"
+    ];
+
+    const QUOTES_ANDREY_FLEE = [
+      "Ой, Гендиректор! Я на дейли забыл зайти!",
+      "Комиссия на объекте?! Бегу готовить отчет!",
+      "Аудит без предупреждения! Спасайтесь!",
+      "Я ухожу в параллельную ветку!"
+    ];
+
+    const QUOTES_BOSS = [
+      "Комиссия на объекте! Сносите заборы!",
+      "Я лично проверю каждый анкер!",
+      "Спецтехника Rise не остановится!"
+    ];
+
+    // Initialize 3D Fences (12 perimeter slots)
+    function initFenceSlots3D() {
+      // Clear old meshes
+      state.fences.forEach(f => {
+        if (f.mesh) scene.remove(f.mesh);
+      });
+      state.fences = [];
+
+      const count = 12;
+      const rx = 22.0;
+      const rz = 15.5;
+
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const x = Math.cos(angle) * rx;
+        const z = Math.sin(angle) * rz;
+
+        const isInitiallyBuilt = (i % 3 !== 1); // 8 out of 12 built
+        const fenceMesh = createFence3D();
+        fenceMesh.position.set(x, 0, z);
+        fenceMesh.rotation.y = -angle + Math.PI / 2;
+        fenceMesh.visible = isInitiallyBuilt;
+        scene.add(fenceMesh);
+
+        state.fences.push({
+          id: i,
+          x: x,
+          z: z,
+          angle: angle,
+          status: isInitiallyBuilt ? 'BUILT' : 'EMPTY',
+          hp: 450 * state.fenceHpMult,
+          maxHp: 450 * state.fenceHpMult,
+          drillProgress: 0,
+          drillTarget: 70,
+          hasHoles: isInitiallyBuilt,
+          hasPanelDelivered: false,
+          mesh: fenceMesh
+        });
+      }
+    }
+
+    // Initialize Heroes
+    function initHeroes3D() {
+      // Clean up previous 3D models
+      [state.danil, state.semyon, state.sasha, state.andrey].forEach(h => {
+        if (h && h.mesh) scene.remove(h.mesh);
+      });
+
+      // Danil (Drill)
+      const danilMesh = createCharacter3D(0x0284c7, 0xea580c, "PERFORATOR");
+      danilMesh.position.set(-5, 0, 2);
+      scene.add(danilMesh);
+      state.danil = {
+        name: "Данил",
+        x: -5,
+        z: 2,
+        speed: 0.95, // Slower measured pace
+        state: "IDLE",
+        mesh: danilMesh,
+        isDrilling: false
+      };
+
+      // Semyon (Carrying fence)
+      const semyonMesh = createCharacter3D(0x0284c7, 0xf59e0b, "FENCE");
+      semyonMesh.position.set(-28, 0, 18);
+      scene.add(semyonMesh);
+      state.semyon = {
+        name: "Семён",
+        x: -28,
+        z: 18,
+        speed: 0.85,
+        state: "FETCHING_FENCE",
+        hasFence: true,
+        mesh: semyonMesh
+      };
+
+      // Sasha (Mounting)
+      const sashaMesh = createCharacter3D(0x0284c7, 0xea580c);
+      sashaMesh.position.set(5, 0, 2);
+      scene.add(sashaMesh);
+      state.sasha = {
+        name: "Саша",
+        x: 5,
+        z: 2,
+        speed: 0.95,
+        state: "IDLE",
+        mesh: sashaMesh
+      };
+
+      // Programmers Seated Models
+      const ilyaMesh = createCharacter3D(0x3b82f6, 0x64748b);
+      ilyaMesh.position.set(-2.5, 0, 9);
+      ilyaMesh.rotation.y = Math.PI;
+      scene.add(ilyaMesh);
+
+      const vasyaMesh = createCharacter3D(0x6366f1, 0x475569);
+      vasyaMesh.position.set(2.5, 0, 9);
+      vasyaMesh.rotation.y = Math.PI;
+      scene.add(vasyaMesh);
+
+      state.andrey = null;
+    }
+
+    // ==========================================
+    // WAVES & ENEMY SPAWNING (MEASURED & TACTICAL)
+    // ==========================================
+    function startWave(waveNum) {
+      state.wave = waveNum;
+      state.waveSpawning = true;
+      state.enemiesToSpawn = [];
+
+      document.getElementById('ui-wave').innerText = `${waveNum} / ${state.maxWaves}`;
+
+      // Relaxed tactical pacing: larger delays between spawns
+      if (waveNum === 1) {
+        for (let i = 0; i < 8; i++) {
+          state.enemiesToSpawn.push({ type: 'BASIC', delay: i * 2800 });
+        }
+      } else if (waveNum === 2) {
+        for (let i = 0; i < 14; i++) {
+          const type = (i % 3 === 0) ? 'FAST' : 'BASIC';
+          state.enemiesToSpawn.push({ type, delay: i * 2400 });
+        }
+      } else if (waveNum === 3) {
+        for (let i = 0; i < 18; i++) {
+          const type = (i === 9) ? 'MINI_BOSS' : ((i % 4 === 0) ? 'FAST' : 'BASIC');
+          state.enemiesToSpawn.push({ type, delay: i * 2000 });
+        }
+      } else if (waveNum === 4) {
+        for (let i = 0; i < 22; i++) {
+          const type = (i % 6 === 0) ? 'MINI_BOSS' : ((i % 3 === 0) ? 'FAST' : 'BASIC');
+          state.enemiesToSpawn.push({ type, delay: i * 1800 });
+        }
+      } else if (waveNum >= 5) {
+        showBossAlert();
+        state.enemiesToSpawn.push({ type: 'FINAL_BOSS', delay: 1500 });
+        for (let i = 0; i < 18; i++) {
+          state.enemiesToSpawn.push({ type: (i % 2 === 0) ? 'FAST' : 'BASIC', delay: 4500 + i * 1600 });
+        }
+      }
+
+      state.waveStartTime = Date.now();
+    }
+
+    function showBossAlert() {
+      const bossOverlay = document.getElementById('overlay-boss');
+      bossOverlay.classList.remove('hidden');
+      bossOverlay.classList.add('flex');
+      sfx.playBossRoar();
+      sfx.playSiren();
+      setTimeout(() => {
+        bossOverlay.classList.add('hidden');
+        bossOverlay.classList.remove('flex');
+      }, 4500);
+    }
+
+    function spawnEnemy3D(type) {
+      // Pick random outer edge
+      const angle = Math.random() * Math.PI * 2;
+      const spawnRadius = 45;
+      const x = Math.cos(angle) * spawnRadius;
+      const z = Math.sin(angle) * spawnRadius;
+
+      let hp = 55;
+      let speed = 0.35; // Slower, less hectic
+      let damage = 6;
+      let name = "Рабочий с претензией";
+      let mesh = null;
+
+      if (type === 'FAST') {
+        name = "Быстрый электрик";
+        hp = 35;
+        speed = 0.65;
+        damage = 4;
+        mesh = createCharacter3D(0x0284c7, 0x38bdf8);
+      } else if (type === 'MINI_BOSS') {
+        name = "Начальник цеха";
+        hp = 380;
+        speed = 0.28;
+        damage = 15;
+        mesh = createCharacter3D(0x78350f, 0xffffff);
+        mesh.scale.set(1.4, 1.4, 1.4);
+      } else if (type === 'FINAL_BOSS') {
+        // ==========================================
+        // 3D HEAVY VEHICLE WITH GEN DIRECTOR & COMMISSION
+        // ==========================================
+        name = "Комиссия с Гендиректором на технике";
+        hp = 2800;
+        speed = 0.22;
+        damage = 50;
+        
+        const vehicleGroup = new THREE.Group();
+        // Heavy Chassis
+        const chassisGeo = new THREE.BoxGeometry(6.5, 2.5, 9.0);
+        const chassisMat = new THREE.MeshStandardMaterial({ color: 0x881337, roughness: 0.4, metalness: 0.7 });
+        const chassis = new THREE.Mesh(chassisGeo, chassisMat);
+        chassis.position.y = 1.6;
+        chassis.castShadow = true;
+        vehicleGroup.add(chassis);
+
+        // Heavy Cowcatcher Ram on front
+        const ramGeo = new THREE.BoxGeometry(7.2, 2.0, 1.6);
+        const ramMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, metalness: 0.9, roughness: 0.2 });
+        const ram = new THREE.Mesh(ramGeo, ramMat);
+        ram.position.set(0, 1.2, -4.8);
+        ram.castShadow = true;
+        vehicleGroup.add(ram);
+
+        // Flashing amber rotating beacon
+        const beaconGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.6, 8);
+        const beaconMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+        const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+        beacon.position.set(0, 3.2, 0);
+        vehicleGroup.add(beacon);
+
+        // Gen Director in cabin with white VIP helmet
+        const dirMesh = createCharacter3D(0x1e293b, 0xffffff);
+        dirMesh.position.set(0, 2.8, -1.0);
+        vehicleGroup.add(dirMesh);
+
+        mesh = vehicleGroup;
+        sfx.playBossRoar();
+      } else {
+        // Basic Worker
+        mesh = createCharacter3D(0x475569, 0xf87171);
+      }
+
+      mesh.position.set(x, 0, z);
+      scene.add(mesh);
+
+      const enemy = {
+        id: Math.random(),
+        type: type,
+        name: name,
+        x: x,
+        z: z,
+        hp: hp,
+        maxHp: hp,
+        speed: speed,
+        damage: damage,
+        mesh: mesh,
+        stunnedTimer: 0,
+        fleeing: false,
+        attackCooldown: 0,
+        quoteTimer: Math.random() * 200 + 100
+      };
+
+      state.enemies.push(enemy);
+
+      if (Math.random() < 0.35 && type !== 'FINAL_BOSS') {
+        const quote = QUOTES_WORKERS[Math.floor(Math.random() * QUOTES_WORKERS.length)];
+        createSpeechBubble(enemy, quote, 2400, "#ef4444");
+      } else if (type === 'FINAL_BOSS') {
+        createSpeechBubble(enemy, "ГЕНДИРЕКТОР: СНОСИТЕ ЗАБОРЫ! К РОБОТУ!", 4000, "#dc2626");
+      }
+    }
+
+    // ==========================================
+    // FLOATING 2D LABELS SYNCED TO 3D SCENE
+    // ==========================================
+    function createSpeechBubble(target, text, duration = 2400, color = "#0284c7") {
+      state.speechBubbles.push({
+        target: target,
+        text: text,
+        color: color,
+        duration: duration,
+        created: Date.now()
+      });
+    }
+
+    function createFloatingText(x, z, text, color = "#fbbf24") {
+      state.particles.push({
+        type: "TEXT",
+        x: x,
+        y: 3.5,
+        z: z,
+        text: text,
+        color: color,
+        life: 60,
+        maxLife: 60
+      });
+    }
+
+    function createSparks3D(x, z, count = 4, colorHex = 0xf59e0b) {
+      for (let i = 0; i < count; i++) {
+        const pGeo = new THREE.SphereGeometry(0.18, 6, 6);
+        const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        pMesh.position.set(x, 1.2, z);
+        scene.add(pMesh);
+
+        const angle = Math.random() * Math.PI * 2;
+        const spd = Math.random() * 0.15 + 0.05;
+        state.particles.push({
+          type: "SPARK",
+          mesh: pMesh,
+          vx: Math.cos(angle) * spd,
+          vy: Math.random() * 0.18 + 0.05,
+          vz: Math.sin(angle) * spd,
+          life: 25
+        });
+      }
+    }
+
+    // ==========================================
+    // CREW LOGIC & SLOW DISTRACTION RATE
+    // ==========================================
+    function updateCrew3D() {
+      // 1. Distraction state
+      if (state.isDistracted) {
+        // Move towards programmers desk
+        const talkSlots = [
+          { x: -5, z: 9 }, // Danil
+          { x: 0, z: 12 }, // Semyon
+          { x: 5, z: 9 }   // Sasha
+        ];
+
+        moveTowards(state.danil, talkSlots[0].x, talkSlots[0].z);
+        state.danil.state = "DISTRACTED";
+        state.danil.isDrilling = false;
+
+        moveTowards(state.semyon, talkSlots[1].x, talkSlots[1].z);
+        state.semyon.state = "DISTRACTED";
+
+        moveTowards(state.sasha, talkSlots[2].x, talkSlots[2].z);
+        state.sasha.state = "DISTRACTED";
+
+        // Measured Super Points Accumulation (slower, as requested!)
+        state.superPoints = Math.min(state.superPointsMax, state.superPoints + 0.18 * state.superPointMult);
+
+        state.distractionTimer++;
+        if (state.distractionTimer % 180 === 0) {
+          sfx.playChatter();
+          createSpeechBubble(state.danil, "Данил: Смотри, какой бур на 18 купил!", 2200, "#f97316");
+        }
+
+        updateUIStatus();
+        return;
+      }
+
+      // Normal very slow trickle when not distracted
+      state.superPoints = Math.min(state.superPointsMax, state.superPoints + 0.03 * state.superPointMult);
+
+      // --- DANIL: Drills Holes ---
+      let targetForDanil = state.fences.find(f => f.status === 'EMPTY' && !f.hasHoles);
+      if (!targetForDanil) {
+        targetForDanil = state.fences.find(f => f.status === 'DAMAGED' && !f.hasHoles);
+      }
+
+      if (targetForDanil) {
+        const dist = Math.hypot(state.danil.x - targetForDanil.x, state.danil.z - targetForDanil.z);
+        if (dist > 2.5) {
+          moveTowards(state.danil, targetForDanil.x, targetForDanil.z);
+          state.danil.state = "WALKING";
+          state.danil.isDrilling = false;
+        } else {
+          // Drilling in floor!
+          state.danil.state = "DRILLING";
+          state.danil.isDrilling = true;
+          targetForDanil.drillProgress += 0.85 * state.drillSpeedMult;
+          createSparks3D(targetForDanil.x, targetForDanil.z, 1, 0xfbbf24);
+
+          if (Math.random() < 0.25) sfx.playDrill();
+
+          if (targetForDanil.drillProgress >= targetForDanil.drillTarget) {
+            targetForDanil.hasHoles = true;
+            targetForDanil.drillProgress = 0;
+            state.danil.isDrilling = false;
+            createFloatingText(targetForDanil.x, targetForDanil.z, "Отверстия готовы!", "#38bdf8");
+            sfx.playClank();
+          }
+        }
+      } else {
+        moveTowards(state.danil, -4, 2);
+        state.danil.state = "IDLE";
+        state.danil.isDrilling = false;
+      }
+
+      // --- SEMYON: Fetches Fences ---
+      let slotNeedingFence = state.fences.find(f => (f.status === 'EMPTY' || f.status === 'DAMAGED') && f.hasHoles && !f.hasPanelDelivered);
+
+      if (!state.semyon.hasFence) {
+        const distToWh = Math.hypot(state.semyon.x - (-32), state.semyon.z - 20);
+        if (distToWh > 2.5) {
+          moveTowards(state.semyon, -32, 20);
+          state.semyon.state = "FETCHING";
+        } else {
+          state.semyon.hasFence = true;
+          createFloatingText(-32, 20, "+Забор взят!", "#f59e0b");
+          sfx.playClank();
+        }
+      } else {
+        if (slotNeedingFence) {
+          const distToSlot = Math.hypot(state.semyon.x - slotNeedingFence.x, state.semyon.z - slotNeedingFence.z);
+          if (distToSlot > 2.5) {
+            moveTowards(state.semyon, slotNeedingFence.x, slotNeedingFence.z);
+            state.semyon.state = "DELIVERING";
+          } else {
+            state.semyon.hasFence = false;
+            slotNeedingFence.hasPanelDelivered = true;
+            createFloatingText(slotNeedingFence.x, slotNeedingFence.z, "Забор доставлен!", "#eab308");
+            sfx.playClank();
+          }
+        } else {
+          moveTowards(state.semyon, -10, 14);
+          state.semyon.state = "READY";
+        }
+      }
+
+      // --- SASHA: Mounts Fences in Holes ---
+      let slotReadyForMount = state.fences.find(f => (f.status === 'EMPTY' || f.status === 'DAMAGED') && f.hasHoles && f.hasPanelDelivered);
+
+      if (slotReadyForMount) {
+        const distToMount = Math.hypot(state.sasha.x - slotReadyForMount.x, state.sasha.z - slotReadyForMount.z);
+        if (distToMount > 2.5) {
+          moveTowards(state.sasha, slotReadyForMount.x, slotReadyForMount.z);
+          state.sasha.state = "APPROACHING";
+        } else {
+          state.sasha.state = "MOUNTING";
+          slotReadyForMount.mountProgress = (slotReadyForMount.mountProgress || 0) + 1.1;
+          createSparks3D(slotReadyForMount.x, slotReadyForMount.z, 1, 0x38bdf8);
+
+          if (slotReadyForMount.mountProgress >= 70) {
+            slotReadyForMount.status = 'BUILT';
+            slotReadyForMount.hp = slotReadyForMount.maxHp;
+            slotReadyForMount.mountProgress = 0;
+            slotReadyForMount.hasPanelDelivered = false;
+            if (slotReadyForMount.mesh) slotReadyForMount.mesh.visible = true;
+            createFloatingText(slotReadyForMount.x, slotReadyForMount.z, "ЗАБОР ГОТОВ! 🛡️", "#10b981");
+            sfx.playClank();
+          }
+        }
+      } else {
+        // Repair damaged fences
+        let damagedFence = state.fences.find(f => f.status === 'BUILT' && f.hp < f.maxHp * 0.85);
+        if (damagedFence) {
+          const dist = Math.hypot(state.sasha.x - damagedFence.x, state.sasha.z - damagedFence.z);
+          if (dist > 2.5) {
+            moveTowards(state.sasha, damagedFence.x, damagedFence.z);
+          } else {
+            damagedFence.hp = Math.min(damagedFence.maxHp, damagedFence.hp + 1.4);
+            createSparks3D(damagedFence.x, damagedFence.z, 1, 0x10b981);
+          }
+        } else {
+          moveTowards(state.sasha, 4, 2);
+          state.sasha.state = "IDLE";
+        }
+      }
+
+      // Update sync meshes
+      [state.danil, state.semyon, state.sasha].forEach(h => {
+        if (h && h.mesh) {
+          h.mesh.position.set(h.x, 0, h.z);
+        }
+      });
+
+      // Update Andrey logic
+      updateAndrey3D();
+
+      updateUIStatus();
+    }
+
+    function moveTowards(entity, targetX, targetZ, speedOverride = null) {
+      const spd = speedOverride || entity.speed;
+      const dx = targetX - entity.x;
+      const dz = targetZ - entity.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.4) {
+        entity.x += (dx / dist) * spd * 0.15;
+        entity.z += (dz / dist) * spd * 0.15;
+        if (entity.mesh) {
+          entity.mesh.rotation.y = Math.atan2(dx, dz);
+        }
+      }
+    }
+
+    // ==========================================
+    // ANDREY: COOLDOWN, FLEE FROM BOSS, RALLY OUTSIDE
+    // ==========================================
+    function updateAndrey3D() {
+      // Cooldown timer update
+      if (state.andreyCooldown > 0) {
+        state.andreyCooldown -= 1 / 60;
+        if (state.andreyCooldown <= 0) {
+          state.andreyCooldown = 0;
+        }
+      }
+
+      if (!state.andrey) return;
+
+      const a = state.andrey;
+      a.duration--;
+      a.quoteTimer--;
+
+      // Check proximity to Bosses / Commission!
+      let nearestBoss = null;
+      let distToBoss = 999;
+      state.enemies.forEach(e => {
+        if (e.type === 'FINAL_BOSS' || e.type === 'MINI_BOSS') {
+          const d = Math.hypot(a.x - e.x, a.z - e.z);
+          if (d < distToBoss) {
+            distToBoss = d;
+            nearestBoss = e;
+          }
+        }
+      });
+
+      // FLEE FROM BOSSES!
+      if (nearestBoss && distToBoss < 16) {
+        // Andrey gets scared and runs away in opposite direction!
+        const fleeDx = a.x - nearestBoss.x;
+        const fleeDz = a.z - nearestBoss.z;
+        const d = Math.hypot(fleeDx, fleeDz) || 1;
+        a.x += (fleeDx / d) * 0.35;
+        a.z += (fleeDz / d) * 0.35;
+
+        if (a.fleeQuoteTimer <= 0) {
+          a.fleeQuoteTimer = 120;
+          const q = QUOTES_ANDREY_FLEE[Math.floor(Math.random() * QUOTES_ANDREY_FLEE.length)];
+          createSpeechBubble(a, q, 2200, "#f43f5e");
+          sfx.playChatter();
+        }
+        a.fleeQuoteTimer--;
+      } else {
+        // Normal patrol: Leads workers OUTSIDE the fence perimeter!
+        // Moves back and forth along outer north gate (z = -22 to -25)
+        const t = (Date.now() - a.startTime) * 0.0015;
+        const targetX = Math.sin(t) * 16;
+        const targetZ = -23.0; // OUTSIDE THE PERIMETER!
+        moveTowards(a, targetX, targetZ, 0.45);
+
+        if (a.quoteTimer <= 0) {
+          a.quoteTimer = 160;
+          const q = QUOTES_ANDREY_RALLY[Math.floor(Math.random() * QUOTES_ANDREY_RALLY.length)];
+          createSpeechBubble(a, q, 2500, "#818cf8");
+          sfx.playChatter();
+        }
+      }
+
+      // Sync Andrey 3D Mesh
+      if (a.mesh) {
+        a.mesh.position.set(a.x, 0, a.z);
+      }
+
+      // Andrey timer expired
+      if (a.duration <= 0) {
+        createFloatingText(a.x, a.z, "АНДРЕЙ: УШЁЛ НА ЗВОНОК! 👋", "#818cf8");
+        scene.remove(a.mesh);
+        state.andrey = null;
+        state.andreyCooldown = state.andreyCooldownMax; // Start cooldown!
+        sfx.playChime();
+      }
+    }
+
+    function summonAndrey() {
+      if (state.superPoints < 180 || state.andrey !== null || state.andreyCooldown > 0) return;
+      state.superPoints -= 180;
+      sfx.playChime();
+      sfx.playLaser();
+
+      // Spawn Andrey OUTSIDE the fences at North Gate!
+      const andreyMesh = createCharacter3D(0x4f46e5, 0x818cf8, "PIZZA");
+      andreyMesh.position.set(0, 0, -22);
+      scene.add(andreyMesh);
+
+      state.andrey = {
+        name: "Андрей",
+        x: 0,
+        z: -22,
+        duration: 900, // 15 seconds
+        maxDuration: 900,
+        quoteTimer: 30,
+        fleeQuoteTimer: 0,
+        startTime: Date.now(),
+        mesh: andreyMesh
+      };
+
+      createFloatingText(0, -22, "АНДРЕЙ НА СВЯЗИ! 🤝", "#818cf8");
+      createSpeechBubble(state.andrey, "Коллеги, за мной за забор! Пицца приехала!", 3500, "#6366f1");
+      state.screenShake = 5;
+      updateUIStatus();
+    }
+
+    // ==========================================
+    // ENEMY AI: ANDREY ATTRACTION (BOSSES IMMUNE)
+    // ==========================================
+    function updateEnemies3D() {
+      for (let i = state.enemies.length - 1; i >= 0; i--) {
+        const e = state.enemies[i];
+
+        if (e.stunnedTimer > 0) {
+          e.stunnedTimer--;
+          createSparks3D(e.x, e.z, 1, 0x60a5fa);
+          continue;
+        }
+
+        if (e.fleeing) {
+          const dx = e.x - 0;
+          const dz = e.z - 0;
+          const d = Math.hypot(dx, dz) || 1;
+          e.x += (dx / d) * (e.speed * 1.5);
+          e.z += (dz / d) * (e.speed * 1.5);
+          if (e.mesh) e.mesh.position.set(e.x, 0, e.z);
+
+          if (Math.hypot(e.x, e.z) > 55) {
+            scene.remove(e.mesh);
+            state.enemies.splice(i, 1);
+            state.kills++;
+            state.funds += 15;
+          }
+          continue;
+        }
+
+        // TARGET SELECTION:
+        // Regular workers follow Andrey if active.
+        // BOSSES & COMMISSION NEVER REACT TO ANDREY!
+        let targetX = 0;
+        let targetZ = 0;
+        let isLuredByAndrey = false;
+
+        if (state.andrey && e.type !== 'FINAL_BOSS' && e.type !== 'MINI_BOSS') {
+          targetX = state.andrey.x;
+          targetZ = state.andrey.z;
+          isLuredByAndrey = true;
+        }
+
+        const dx = targetX - e.x;
+        const dz = targetZ - e.z;
+        const distToTarget = Math.hypot(dx, dz);
+
+        // If lured by Andrey, they walk to him OUTSIDE fences
+        if (isLuredByAndrey) {
+          if (distToTarget > 4.5) {
+            e.x += (dx / distToTarget) * e.speed * 0.15;
+            e.z += (dz / distToTarget) * e.speed * 0.15;
+            if (e.mesh) {
+              e.mesh.rotation.y = Math.atan2(dx, dz);
+              e.mesh.position.set(e.x, 0, e.z);
+            }
+          }
+          continue; // Andrey neutralized their aggression!
+        }
+
+        // Normal path to Robot & Fences
+        let blockedFence = null;
+        for (const fence of state.fences) {
+          if (fence.status === 'BUILT') {
+            const distToFence = Math.hypot(fence.x - e.x, fence.z - e.z);
+            if (distToFence < 3.2) {
+              blockedFence = fence;
+              break;
+            }
+          }
+        }
+
+        if (blockedFence) {
+          e.attackCooldown = (e.attackCooldown || 0) + 1;
+          if (e.attackCooldown >= 45) { // Slower attack cadence
+            e.attackCooldown = 0;
+            blockedFence.hp -= e.damage;
+            createSparks3D(blockedFence.x, blockedFence.z, 2, 0xf87171);
+            createFloatingText(blockedFence.x, blockedFence.z, `-${e.damage}`, "#ef4444");
+            sfx.playClank();
+
+            if (e.type === 'FINAL_BOSS') {
+              state.screenShake = 12;
+              sfx.playBossRoar();
+            }
+
+            if (blockedFence.hp <= 0) {
+              blockedFence.status = 'DAMAGED';
+              blockedFence.hasHoles = false;
+              blockedFence.hasPanelDelivered = false;
+              if (blockedFence.mesh) blockedFence.mesh.visible = false;
+              createFloatingText(blockedFence.x, blockedFence.z, "ЗАБОР СЛОМАН! ⚠️", "#dc2626");
+              createSparks3D(blockedFence.x, blockedFence.z, 8, 0xdc2626);
+            }
+          }
+        } else if (distToTarget < 5.0) {
+          // Attacking Robot Core
+          e.attackCooldown = (e.attackCooldown || 0) + 1;
+          if (e.attackCooldown >= 50) {
+            e.attackCooldown = 0;
+            state.robotHp -= e.damage * 1.5;
+            state.screenShake = 6;
+            createSparks3D(0, 0, 5, 0xef4444);
+            createFloatingText(0, 0, `-${Math.ceil(e.damage * 1.5)} HP РОБОТА!`, "#ef4444");
+
+            if (state.robotHp <= 0) {
+              gameOver();
+              return;
+            }
+          }
+        } else {
+          e.x += (dx / distToTarget) * e.speed * 0.15;
+          e.z += (dz / distToTarget) * e.speed * 0.15;
+          if (e.mesh) {
+            e.mesh.rotation.y = Math.atan2(dx, dz);
+            e.mesh.position.set(e.x, 0, e.z);
+          }
+        }
+      }
+    }
+
+    // Super Skills
+    function triggerSuperSkill(skillId) {
+      if (skillId === 1 && state.superPoints >= 120) {
+        state.superPoints -= 120;
+        sfx.playLaser();
+        state.screenShake = 5;
+        state.enemies.forEach(e => {
+          e.stunnedTimer = 360;
+          createFloatingText(e.x, e.z, "BUG 404: СТУПОР!", "#60a5fa");
+        });
+        createSpeechBubble(state.danil, "Илья: Выкатили хотфикс в прод!", 3000, "#38bdf8");
+      } 
+      else if (skillId === 2 && state.superPoints >= 260) {
+        state.superPoints -= 260;
+        sfx.playSiren();
+        state.screenShake = 7;
+        state.enemies.forEach((e, idx) => {
+          if (e.type !== 'FINAL_BOSS' && idx % 2 === 0) {
+            e.fleeing = true;
+            createFloatingText(e.x, e.z, "ЭВАКУАЦИЯ ТБ!", "#eab308");
+          }
+        });
+        createSpeechBubble(state.sasha, "Вася: Включил сирену ТБ!", 3000, "#fbbf24");
+      } 
+      else if (skillId === 3 && state.superPoints >= 350) {
+        state.superPoints -= 350;
+        sfx.playLaser();
+        sfx.playBossRoar();
+        state.screenShake = 16;
+
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+          const e = state.enemies[i];
+          const dist = Math.hypot(e.x, e.z);
+          if (dist < 32) {
+            const dmg = 340;
+            e.hp -= dmg;
+            createFloatingText(e.x, e.z, `-${dmg} РАЗГОН!`, "#22d3ee");
+            createSparks3D(e.x, e.z, 6, 0x22d3ee);
+            if (e.hp <= 0) {
+              scene.remove(e.mesh);
+              state.enemies.splice(i, 1);
+              state.kills++;
+              state.funds += (e.type === 'FINAL_BOSS' ? 300 : 30);
+            }
+          }
+        }
+      } 
+      else if (skillId === 4 && state.superPoints >= 450) {
+        state.superPoints -= 450;
+        sfx.playClank();
+        sfx.playSiren();
+        state.screenShake = 22;
+
+        state.enemies.forEach(e => {
+          if (e.type === 'FINAL_BOSS') {
+            const dmg = Math.floor(e.maxHp * 0.45);
+            e.hp -= dmg;
+            e.stunnedTimer = 450;
+            createFloatingText(e.x, e.z, `АКТ ВВОДА: -${dmg} HP! ПЕЧАТЬ ПОСТАВЛЕНА!`, "#10b981");
+            createSparks3D(e.x, e.z, 15, 0x10b981);
+          } else {
+            e.hp -= 280;
+            e.stunnedTimer = 300;
+          }
+        });
+      }
+      updateUIStatus();
+    }
+
+    // UI Status Update
+    function updateUIStatus() {
+      const stDanil = document.getElementById('status-danil');
+      const stSemyon = document.getElementById('status-semyon');
+      const stSasha = document.getElementById('status-sasha');
+      const stDevs = document.getElementById('status-devs');
+      const stAndrey = document.getElementById('status-andrey');
+
+      if (state.isDistracted) {
+        stDanil.innerText = "ОТВЛЕЧЁН 💬";
+        stDanil.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold animate-pulse";
+        stSemyon.innerText = "ОТВЛЕЧЁН 💬";
+        stSemyon.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold animate-pulse";
+        stSasha.innerText = "ОТВЛЕЧЁН 💬";
+        stSasha.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold animate-pulse";
+        stDevs.innerText = "КОДЯТ (x4 ОЧКИ) ⚡";
+        stDevs.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold animate-pulse";
+      } else {
+        stDanil.innerText = state.danil.isDrilling ? "БУРИТ ⚡" : "В строю";
+        stDanil.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400";
+        stSemyon.innerText = state.semyon.hasFence ? "Несёт забор" : "Склад";
+        stSemyon.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400";
+        stSasha.innerText = (state.sasha.state === "MOUNTING") ? "Крепит анкеры" : "Готов";
+        stSasha.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400";
+        stDevs.innerText = "Кодят";
+        stDevs.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400";
+      }
+
+      // Andrey Status & Cooldown UI
+      const btnAndrey = document.getElementById('btn-skill-andrey');
+      const badgeAndrey = document.getElementById('badge-andrey-cost');
+      const barAndrey = document.getElementById('andrey-cooldown-bar');
+
+      if (state.andrey) {
+        const secLeft = Math.ceil(state.andrey.duration / 60);
+        stAndrey.innerText = `ПЕРЕГОВОРЫ (${secLeft}с) 🤝`;
+        stAndrey.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold animate-pulse";
+        badgeAndrey.innerText = `АКТИВЕН (${secLeft}с)`;
+        barAndrey.style.width = `${(state.andrey.duration / state.andrey.maxDuration) * 100}%`;
+        btnAndrey.disabled = true;
+      } else if (state.andreyCooldown > 0) {
+        const cdLeft = Math.ceil(state.andreyCooldown);
+        stAndrey.innerText = `ОТКАТ (${cdLeft}с)`;
+        stAndrey.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400";
+        badgeAndrey.innerText = `ОТКАТ ${cdLeft}с`;
+        barAndrey.style.width = `${(state.andreyCooldown / state.andreyCooldownMax) * 100}%`;
+        btnAndrey.disabled = true;
+      } else {
+        stAndrey.innerText = "В резерве";
+        stAndrey.className = "font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400";
+        badgeAndrey.innerText = "180 pts";
+        barAndrey.style.width = "0%";
+        btnAndrey.disabled = state.superPoints < 180;
+      }
+
+      // Super Points Bar
+      const pct = Math.min(100, (state.superPoints / state.superPointsMax) * 100);
+      document.getElementById('ui-super-bar').style.width = `${pct}%`;
+      document.getElementById('ui-super-points-text').innerText = `${Math.floor(state.superPoints)} / ${state.superPointsMax}`;
+
+      // Distraction Bar
+      const dBar = document.getElementById('ui-distraction-bar');
+      const dText = document.getElementById('ui-distraction-status');
+      if (state.isDistracted) {
+        dBar.style.width = '100%';
+        dText.innerText = "ОТВЛЕЧЕНЫ (100%)";
+        dText.className = "text-purple-400 font-bold";
+      } else {
+        dBar.style.width = '0%';
+        dText.innerText = "РАБОТАЮТ (0%)";
+        dText.className = "text-emerald-400 font-bold";
+      }
+
+      // Robot HP
+      const rHpPct = Math.max(0, (state.robotHp / state.robotMaxHp) * 100);
+      document.getElementById('ui-robot-hp-bar').style.width = `${rHpPct}%`;
+      document.getElementById('ui-robot-hp-text').innerText = `${Math.ceil(rHpPct)}%`;
+
+      document.getElementById('btn-skill-1').disabled = state.superPoints < 120;
+      document.getElementById('btn-skill-2').disabled = state.superPoints < 260;
+      document.getElementById('btn-skill-3').disabled = state.superPoints < 350;
+      document.getElementById('btn-skill-4').disabled = state.superPoints < 450;
+
+      document.getElementById('ui-funds').innerText = `💰 ${state.funds} руб`;
+      document.getElementById('btn-upg-drill').disabled = state.funds < state.costDrill;
+      document.getElementById('btn-upg-fence').disabled = state.funds < state.costFence;
+      document.getElementById('btn-upg-coffee').disabled = state.funds < state.costCoffee;
+
+      document.getElementById('ui-enemies').innerText = state.enemies.length;
+    }
+
+    // ==========================================
+    // 3D RENDER LOOP
+    // ==========================================
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (state.running && !state.paused) {
+        // Spawning wave enemies
+        if (state.waveSpawning && state.enemiesToSpawn.length > 0) {
+          const now = Date.now() - state.waveStartTime;
+          for (let i = state.enemiesToSpawn.length - 1; i >= 0; i--) {
+            if (now >= state.enemiesToSpawn[i].delay) {
+              spawnEnemy3D(state.enemiesToSpawn[i].type);
+              state.enemiesToSpawn.splice(i, 1);
+            }
+          }
+        }
+
+        if (state.waveSpawning && state.enemiesToSpawn.length === 0 && state.enemies.length === 0) {
+          waveCleared();
+        }
+
+        // Updates
+        updateCrew3D();
+        updateEnemies3D();
+      }
+
+      // Robot turntable idle animation
+      turntable.rotation.y = Math.sin(Date.now() * 0.001) * 0.8;
+      arm1.rotation.z = Math.sin(Date.now() * 0.0015) * 0.25;
+
+      // Update 3D particles
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.life--;
+        if (p.type === "SPARK") {
+          p.mesh.position.x += p.vx;
+          p.mesh.position.y += p.vy;
+          p.mesh.position.z += p.vz;
+          p.vy -= 0.008; // Gravity
+          if (p.life <= 0) {
+            scene.remove(p.mesh);
+            state.particles.splice(i, 1);
+          }
+        } else if (p.type === "TEXT") {
+          p.y += 0.03;
+          if (p.life <= 0) {
+            state.particles.splice(i, 1);
+          }
+        }
+      }
+
+      // Camera screen shake
+      if (state.screenShake > 0) {
+        camera.position.x = (Math.random() - 0.5) * state.screenShake * 0.2;
+        camera.position.z = 52 + (Math.random() - 0.5) * state.screenShake * 0.2;
+        state.screenShake *= 0.88;
+        if (state.screenShake < 0.2) state.screenShake = 0;
+      }
+
+      renderer.render(scene, camera);
+      render2DLabels();
+    }
+
+    // Render HTML labels synced to 3D positions
+    function render2DLabels() {
+      labelsContainer.innerHTML = '';
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+
+      // Speech bubbles
+      const now = Date.now();
+      for (let i = state.speechBubbles.length - 1; i >= 0; i--) {
+        const sb = state.speechBubbles[i];
+        if (now - sb.created > sb.duration) {
+          state.speechBubbles.splice(i, 1);
+          continue;
+        }
+
+        const screenPos = toScreenPosition(sb.target.x, 3.8, sb.target.z, w, h);
+        if (screenPos) {
+          const div = document.createElement('div');
+          div.className = 'world-label px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-lg border border-slate-700 backdrop-blur-md';
+          div.style.left = `${screenPos.x}px`;
+          div.style.top = `${screenPos.y}px`;
+          div.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+          div.style.color = sb.color;
+          div.innerText = sb.text;
+          labelsContainer.appendChild(div);
+        }
+      }
+
+      // Floating text particles
+      state.particles.forEach(p => {
+        if (p.type === "TEXT") {
+          const screenPos = toScreenPosition(p.x, p.y, p.z, w, h);
+          if (screenPos) {
+            const div = document.createElement('div');
+            div.className = 'world-label font-tech text-xs font-black';
+            div.style.left = `${screenPos.x}px`;
+            div.style.top = `${screenPos.y}px`;
+            div.style.color = p.color;
+            div.style.opacity = p.life / p.maxLife;
+            div.innerText = p.text;
+            labelsContainer.appendChild(div);
+          }
+        }
+      });
+    }
+
+    function toScreenPosition(x, y, z, width, height) {
+      const p = new THREE.Vector3(x, y, z);
+      p.project(camera);
+      if (p.z > 1) return null; // Behind camera
+      return {
+        x: (p.x * 0.5 + 0.5) * width,
+        y: (-(p.y * 0.5) + 0.5) * height
+      };
+    }
+
+    function waveCleared() {
+      state.waveSpawning = false;
+      state.funds += 80 + state.wave * 35;
+      createFloatingText(0, 0, `ВОЛНА ${state.wave} ОТБИТА! +ПРЕМИЯ!`, "#10b981");
+      sfx.playClank();
+
+      if (state.wave >= state.maxWaves) {
+        victory();
+      } else {
+        setTimeout(() => {
+          if (state.running) {
+            startWave(state.wave + 1);
+          }
+        }, 4000);
+      }
+    }
+
+    function victory() {
+      state.running = false;
+      document.getElementById('game-modal').classList.remove('hidden');
+      document.getElementById('modal-content-start').classList.add('hidden');
+      document.getElementById('modal-content-gameover').classList.add('hidden');
+      document.getElementById('modal-content-victory').classList.remove('hidden');
+    }
+
+    function gameOver() {
+      state.running = false;
+      document.getElementById('game-modal').classList.remove('hidden');
+      document.getElementById('modal-content-start').classList.add('hidden');
+      document.getElementById('modal-content-victory').classList.add('hidden');
+      document.getElementById('modal-content-gameover').classList.remove('hidden');
+      document.getElementById('stat-gameover-kills').innerText = state.kills;
+      document.getElementById('stat-gameover-wave').innerText = state.wave;
+    }
+
+    function startGame() {
+      sfx.init();
+      state.running = true;
+      state.paused = false;
+      state.robotHp = state.robotMaxHp;
+      state.superPoints = 0;
+      state.funds = 100;
+      state.kills = 0;
+      state.isDistracted = false;
+      state.andreyCooldown = 0;
+
+      initFenceSlots3D();
+      initHeroes3D();
+
+      document.getElementById('game-modal').classList.add('hidden');
+      startWave(1);
+    }
+
+    // ==========================================
+    // INTERACTIVE CONTROLS & LISTENERS
+    // ==========================================
+    document.getElementById('btn-start-game').addEventListener('click', startGame);
+    document.getElementById('btn-restart-gameover').addEventListener('click', startGame);
+    document.getElementById('btn-endless-mode').addEventListener('click', () => {
+      document.getElementById('game-modal').classList.add('hidden');
+      state.maxWaves = 999;
+      state.running = true;
+      startWave(6);
+    });
+
+    document.getElementById('btn-audio').addEventListener('click', () => {
+      sfx.init();
+      sfx.enabled = !sfx.enabled;
+      document.getElementById('icon-sound-on').classList.toggle('hidden', !sfx.enabled);
+      document.getElementById('icon-sound-off').classList.toggle('hidden', sfx.enabled);
+    });
+
+    // DISTRACTION TOGGLE
+    const btnDistract = document.getElementById('btn-toggle-distract');
+    btnDistract.addEventListener('click', () => {
+      sfx.init();
+      state.isDistracted = !state.isDistracted;
+      const badge = document.getElementById('badge-distract');
+      const label = document.getElementById('distract-btn-label');
+      
+      if (state.isDistracted) {
+        badge.innerText = "АКТИВНО: НАБОР ОЧКОВ";
+        badge.className = "px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse";
+        label.innerText = "ВЕРНУТЬ МОНТАЖНИКОВ НА ОБЪЕКТ!";
+        btnDistract.className = "px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-slate-950 font-tech font-black tracking-wider shadow-lg shadow-amber-600/30 transition-all flex items-center gap-2 transform active:scale-95";
+        sfx.playChatter();
+      } else {
+        badge.innerText = "ОТКЛЮЧЕНО";
+        badge.className = "px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700";
+        label.innerText = "ОТВЛЕЧЬ МОНТАЖНИКОВ НА КОД-РЕВЬЮ!";
+        btnDistract.className = "px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-tech font-black tracking-wider shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 transform active:scale-95";
+      }
+    });
+
+    // Super Skills Listeners
+    document.getElementById('btn-skill-1').addEventListener('click', () => triggerSuperSkill(1));
+    document.getElementById('btn-skill-andrey').addEventListener('click', summonAndrey);
+    document.getElementById('btn-skill-2').addEventListener('click', () => triggerSuperSkill(2));
+    document.getElementById('btn-skill-3').addEventListener('click', () => triggerSuperSkill(3));
+    document.getElementById('btn-skill-4').addEventListener('click', () => triggerSuperSkill(4));
+
+    // Shop Upgrades
+    document.getElementById('btn-upg-drill').addEventListener('click', () => {
+      if (state.funds >= state.costDrill) {
+        state.funds -= state.costDrill;
+        state.drillSpeedMult += 0.5;
+        state.costDrill = Math.floor(state.costDrill * 1.5);
+        document.getElementById('cost-upg-drill').innerText = `${state.costDrill} руб`;
+        sfx.playClank();
+      }
+    });
+
+    document.getElementById('btn-upg-fence').addEventListener('click', () => {
+      if (state.funds >= state.costFence) {
+        state.funds -= state.costFence;
+        state.fenceHpMult += 0.6;
+        state.fences.forEach(f => f.maxHp = 450 * state.fenceHpMult);
+        state.costFence = Math.floor(state.costFence * 1.5);
+        document.getElementById('cost-upg-fence').innerText = `${state.costFence} руб`;
+        sfx.playClank();
+      }
+    });
+
+    document.getElementById('btn-upg-coffee').addEventListener('click', () => {
+      if (state.funds >= state.costCoffee) {
+        state.funds -= state.costCoffee;
+        state.superPointMult += 0.4;
+        state.costCoffee = Math.floor(state.costCoffee * 1.5);
+        document.getElementById('cost-upg-coffee').innerText = `${state.costCoffee} руб`;
+        sfx.playClank();
+      }
+    });
+
+    // Raycast Click on 3D Fence
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    container.addEventListener('click', (evt) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((evt.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((evt.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(floor);
+
+      if (intersects.length > 0) {
+        const pt = intersects[0].point;
+        // Check closest fence slot
+        state.fences.forEach(f => {
+          const dist = Math.hypot(f.x - pt.x, f.z - pt.z);
+          if (dist < 5.0) {
+            if (f.status !== 'BUILT') {
+              createFloatingText(f.x, f.z, "ПРИОРИТЕТ МОНТАЖА! 🎯", "#38bdf8");
+              state.danil.targetX = f.x;
+              state.danil.targetZ = f.z;
+            }
+          }
+        });
+      }
+    });
+
+    // Start 3D rendering loop
+    initFenceSlots3D();
+    initHeroes3D();
+    animate();
+  </script>
+</body>
+</html>
