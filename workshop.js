@@ -69,7 +69,7 @@
     return group;
   }
 
-  function build(THREE, scene, {robotGroup, turntable, arm1, arm2, progStationGroup, warehouseGroup, floor}) {
+  function build(THREE, scene, {progStationGroup, warehouseGroup, floor}) {
     const steel = new THREE.MeshStandardMaterial({color: 0x91a6b7, roughness: 0.36, metalness: 0.7});
     const navy = new THREE.MeshStandardMaterial({color: 0x24384a, roughness: 0.68});
     const rubber = new THREE.MeshStandardMaterial({color: 0x15212b, roughness: 0.9});
@@ -140,26 +140,6 @@
         [Math.cos(angle) * 19.8, 0.105, Math.sin(angle) * 19.8]);
       stripe.rotation.y = -angle;
     }
-
-    // Servo housings, bearing covers, bolts and cable routes follow existing joints.
-    for (let i = 0; i < 12; i++) {
-      const a = i * Math.PI / 6;
-      mesh(robotGroup, new THREE.CylinderGeometry(0.13, 0.13, 0.16, 6), steel,
-        Math.cos(a) * 4.1, 1.88, Math.sin(a) * 4.1);
-    }
-    sign(robotGroup, 'RISE', 'AUTOMATION', [3.3, 0.82], [0, 0.95, 5.03]);
-    for (const [joint, y, radius] of [[turntable, 0.4, 1], [arm1, 0, 0.95], [arm2, -1.5, 0.76]]) {
-      for (const x of [-1, 1]) {
-        const cover = mesh(joint, new THREE.CylinderGeometry(radius, radius, 0.55, 20), steel, x, y, 0);
-        cover.rotation.z = Math.PI / 2;
-        const cap = mesh(joint, new THREE.CylinderGeometry(radius * 0.65, radius * 0.65, 0.59, 16), navy, x * 1.04, y, 0);
-        cap.rotation.z = Math.PI / 2;
-      }
-    }
-    box(arm1, [0.24, 4, 0.28], rubber, [0.88, 0, -0.25]);
-    box(arm2, [0.18, 3.2, 0.2], rubber, [0.68, 0, -0.2]);
-    sign(arm1, 'RISE', 'R-06', [1.1, 0.65], [0, 0.6, 0.711]);
-    for (const x of [-0.7, 0.7]) box(arm2, [0.22, 1.4, 0.36], steel, [x, 3.3, 0.4]);
 
     // Detailed programmer station with keyboard rows, monitor stands and chairs.
     for (const x of [-2.5, 2.5]) {

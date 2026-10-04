@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="three.min.js"></script>
   <script src="characters.js"></script>
+  <script src="robot.js"></script>
   <script src="workshop.js"></script>
   <script>
     if (typeof THREE === 'undefined') {
@@ -197,6 +198,7 @@
         <label for="camera-focus">КАМЕРА</label>
         <select id="camera-focus" aria-label="Выбрать персонажа для осмотра">
           <option value="overview">Цех · общий план</option>
+          <option value="robot">KUKA · робот</option>
           <option value="danil">Данил · перфоратор</option>
           <option value="semyon">Семён · снабжение</option>
           <option value="sasha">Саша · ограждения</option>
@@ -205,6 +207,7 @@
         </select>
         <button id="camera-front" type="button" title="Вид спереди">Спереди</button>
         <button id="camera-back" type="button" title="Вид сзади">Сзади</button>
+        <button id="camera-side" type="button" title="Вид сбоку">Сбоку</button>
         <button id="camera-zoom-in" type="button" aria-label="Приблизить камеру">＋</button>
         <button id="camera-zoom-out" type="button" aria-label="Отдалить камеру">−</button>
         <button id="camera-reset" type="button">Общий план</button>
@@ -711,44 +714,8 @@
     // ==========================================
     
     // 1. Central Robot Arm Assembly
-    const robotGroup = new THREE.Group();
-    // Base pedestal
-    const pedGeo = new THREE.CylinderGeometry(4.5, 5.5, 1.8, 16);
-    const pedMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
-    const pedestal = new THREE.Mesh(pedGeo, pedMat);
-    pedestal.position.y = 0.9;
-    pedestal.castShadow = true;
-    robotGroup.add(pedestal);
-
-    // Turntable
-    const turnGeo = new THREE.CylinderGeometry(3.2, 3.2, 0.8, 16);
-    const turnMat = new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.5, roughness: 0.4 });
-    const turntable = new THREE.Mesh(turnGeo, turnMat);
-    turntable.position.y = 2.1;
-    robotGroup.add(turntable);
-
-    // Arm Segment 1
-    const arm1Geo = new THREE.BoxGeometry(1.4, 5.5, 1.4);
-    const arm1Mat = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.4, roughness: 0.3 });
-    const arm1 = new THREE.Mesh(arm1Geo, arm1Mat);
-    arm1.position.set(0, 4.5, 0);
-    arm1.castShadow = true;
-    turntable.add(arm1);
-
-    // Arm Segment 2
-    const arm2Geo = new THREE.BoxGeometry(1.1, 4.8, 1.1);
-    const arm2Mat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.6, roughness: 0.2 });
-    const arm2 = new THREE.Mesh(arm2Geo, arm2Mat);
-    arm2.position.set(0, 4.5, 0);
-    arm2.castShadow = true;
-    arm1.add(arm2);
-
-    // Tool Gripper / Core
-    const gripGeo = new THREE.BoxGeometry(2.0, 0.8, 2.0);
-    const gripMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00e5ff, emissiveIntensity: 0.6 });
-    const gripper = new THREE.Mesh(gripGeo, gripMat);
-    gripper.position.y = 2.6;
-    arm2.add(gripper);
+    const robotModel = RiseRobot.create(THREE);
+    const robotGroup = robotModel.group;
 
     scene.add(robotGroup);
 
@@ -798,7 +765,7 @@
     }
     scene.add(warehouseGroup);
 
-    RiseWorkshop.build(THREE, scene, {robotGroup, turntable, arm1, arm2, progStationGroup, warehouseGroup, floor});
+    RiseWorkshop.build(THREE, scene, {progStationGroup, warehouseGroup, floor});
 
     // Helper: Create 3D Character Mesh
     function createCharacter3D(jacketColor = 0x124b77, helmetColor = 0xf97316, tool = null, name = '', role = 'crew') {
@@ -1848,6 +1815,8 @@
       inspectionModel = null;
       if (focus !== 'overview') {
         if (!inspectionModels.has(focus)) {
+          if (focus === 'robot') inspectionModels.set(focus, RiseRobot.create(THREE).group);
+          else {
           const looks = {
             danil: [0x124b77, 0xea580c, 'PERFORATOR', 'Данил', 'crew'],
             semyon: [0x175b85, 0xf59e0b, 'FENCE', 'Семён', 'crew'],
@@ -1856,17 +1825,20 @@
             vasya: [0x354e78, 0xe0e6ed, null, 'Вася', 'programmer']
           };
           inspectionModels.set(focus, createCharacter3D(...looks[focus]));
+          }
         }
         inspectionModel = inspectionModels.get(focus);
         inspectionScene.add(inspectionModel);
       }
+      displayPlatform.scale.setScalar(focus === 'robot' ? 2.1 : 1);
       cameraCaption.textContent = focus === 'overview'
         ? 'Выбери сотрудника, чтобы рассмотреть форму'
-        : `Осмотр: ${state[focus].name} · спереди / сзади${state.running ? ' · смена на паузе' : ''}`;
+        : `Осмотр: ${focus === 'robot' ? 'KUKA KR500HA r2300' : state[focus].name}${state.running ? ' · смена на паузе' : ''}`;
     }
     cameraFocusSelect.addEventListener('change', () => selectCamera(cameraFocusSelect.value));
     document.getElementById('camera-front').addEventListener('click', () => {cameraView.side = 0;});
     document.getElementById('camera-back').addEventListener('click', () => {cameraView.side = Math.PI;});
+    document.getElementById('camera-side').addEventListener('click', () => {cameraView.side = Math.PI / 2;});
     function zoomCamera(amount) {cameraView.zoom = Math.max(0.65, Math.min(1.5, cameraView.zoom + amount));}
     document.getElementById('camera-zoom-in').addEventListener('click', () => zoomCamera(-0.12));
     document.getElementById('camera-zoom-out').addEventListener('click', () => zoomCamera(0.12));
@@ -1889,10 +1861,11 @@
     const cameraTarget = new THREE.Vector3();
     function updateCamera() {
       if (inspectionModel) {
-        const angle = cameraView.side + 0.16;
-        const distance = (container.clientWidth < 600 ? 8.8 : 7.5) * cameraView.zoom;
-        cameraTarget.set(0, 2.25, 0);
-        camera.position.set(cameraTarget.x + Math.sin(angle) * distance, 4.15, cameraTarget.z + Math.cos(angle) * distance);
+        const robot = cameraView.focus === 'robot';
+        const angle = cameraView.side + (robot ? 0.35 : 0.16);
+        const distance = (robot ? 24 : container.clientWidth < 600 ? 8.8 : 7.5) * cameraView.zoom;
+        cameraTarget.set(robot ? -1 : 0, robot ? 6 : 2.25, 0);
+        camera.position.set(cameraTarget.x + Math.sin(angle) * distance, robot ? 13 : 4.15, cameraTarget.z + Math.cos(angle) * distance);
       } else {
         cameraTarget.set(0, 0, 2);
         camera.position.set(0, 48 * cameraView.zoom, 52 * cameraView.zoom);
@@ -1950,9 +1923,7 @@
         animatePeople(performance.now() * 0.001);
       }
 
-      // Robot turntable idle animation
-      turntable.rotation.y = Math.sin(Date.now() * 0.001) * 0.8;
-      arm1.rotation.z = Math.sin(Date.now() * 0.0015) * 0.25;
+      if (!state.paused) robotModel.update(performance.now() * 0.001);
 
       // Update 3D particles
       for (let i = state.particles.length - 1; i >= 0; i--) {
