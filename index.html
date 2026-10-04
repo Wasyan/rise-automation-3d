@@ -4,29 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rise Automation: Защита Робота 3D</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    if (typeof tailwind === 'undefined') {
-      document.write('<script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"><\/script>');
-    }
-  </script>
+  <link rel="stylesheet" href="styles.css">
   <script src="three.min.js"></script>
+  <script src="characters.js"></script>
+  <script src="robot.js"></script>
+  <script src="workshop.js"></script>
   <script>
     if (typeof THREE === 'undefined') {
       document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700;900&family=Inter:wght@400;600;800&display=swap');
-    
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: Arial, system-ui, -apple-system, sans-serif;
       user-select: none;
       -webkit-user-select: none;
       overflow-x: hidden;
     }
     .font-tech {
-      font-family: 'Chakra Petch', monospace, sans-serif;
+      font-family: 'Trebuchet MS', Arial, sans-serif;
     }
     .crt-overlay {
       background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
@@ -70,6 +66,38 @@
       white-space: nowrap;
       transition: opacity 0.2s;
     }
+    body { background: #0b1521; }
+    header, main { max-width: 1480px !important; }
+    header { border-top: 3px solid #fb923c !important; }
+    .crt-overlay { opacity: .08; }
+    #canvas-container { aspect-ratio: 16 / 11; border-color: #456073; }
+    #canvas-container > canvas { display: block; }
+    .camera-toolbar {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+      background: #132436; border: 1px solid #345067; border-radius: 14px; padding: 10px 12px;
+      font-size: 12px; color: #d8e7f2;
+    }
+    .camera-toolbar label { color: #91b2c9; font-weight: 700; }
+    .camera-toolbar select, .camera-toolbar button {
+      background: #213a50; border: 1px solid #46647b; border-radius: 7px;
+      color: #f6f9fb; padding: 7px 10px; min-height: 34px; font: inherit; cursor: pointer;
+    }
+    .camera-toolbar button:hover { background: #32536d; }
+    .camera-toolbar button:focus-visible, .camera-toolbar select:focus-visible { outline: 2px solid #fb923c; outline-offset: 3px; }
+    #camera-caption { margin-left: auto; color: #ffd29c; font-size: 11px; }
+    .viewport-note {
+      position: absolute; left: 14px; bottom: 12px; z-index: 12; pointer-events: none;
+      background: #102435d9; border: 1px solid #6b8ba166; border-radius: 8px;
+      padding: 7px 10px; font-size: 11px; color: #c0d6e5;
+    }
+    @media (max-width: 600px) {
+      .camera-toolbar { gap: 6px; padding: 8px; }
+      .camera-toolbar select { max-width: 190px; }
+      #camera-caption { width: 100%; margin-left: 0; }
+      #canvas-container { aspect-ratio: 1 / 1; }
+      #game-modal { padding: 10px; }
+      #game-modal > div { max-height: 100%; overflow-y: auto; padding: 16px; }
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-start p-2 sm:p-4">
@@ -88,7 +116,7 @@
             RISE AUTOMATION 3D
           </span>
           <span class="text-xs font-mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-            3D ENGINE • ТАКТИЧЕСКИЙ РЕЖИМ
+            ЗАЩИТА РОБОТА
           </span>
         </div>
         <p class="text-xs text-slate-400 font-medium">Монтажники анкерят заборы • Программисты заряжают способности • Андрей отводит рабочих</p>
@@ -166,11 +194,33 @@
         </div>
       </div>
 
+      <div class="camera-toolbar" aria-label="Управление камерой">
+        <label for="camera-focus">КАМЕРА</label>
+        <select id="camera-focus" aria-label="Выбрать персонажа для осмотра">
+          <option value="overview">Цех · общий план</option>
+          <option value="robot">KUKA · робот</option>
+          <option value="danil">Данил · перфоратор</option>
+          <option value="semyon">Семён · снабжение</option>
+          <option value="sasha">Саша · ограждения</option>
+          <option value="ilya">Илья · программист</option>
+          <option value="vasya">Вася · программист</option>
+        </select>
+        <button id="camera-front" type="button" title="Вид спереди">Спереди</button>
+        <button id="camera-back" type="button" title="Вид сзади">Сзади</button>
+        <button id="camera-side" type="button" title="Вид сбоку">Сбоку</button>
+        <button id="camera-zoom-in" type="button" aria-label="Приблизить камеру">＋</button>
+        <button id="camera-zoom-out" type="button" aria-label="Отдалить камеру">−</button>
+        <button id="camera-reset" type="button">Общий план</button>
+        <button id="btn-pause" type="button" aria-pressed="false">Пауза</button>
+        <span id="camera-caption" role="status">Выбери сотрудника, чтобы рассмотреть форму</span>
+      </div>
+
       <!-- 3D Viewport Frame -->
       <div id="canvas-container" class="relative w-full aspect-[16/10] bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl group">
         <!-- Three.js Canvas will be inserted here -->
         <div id="labels-container" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
         <div class="crt-overlay absolute inset-0 pointer-events-none z-10"></div>
+        <div class="viewport-note">RISE / УЧАСТОК 01 · Колесо мыши — масштаб</div>
 
         <!-- Boss Alert Overlay -->
         <div id="overlay-boss" class="absolute inset-0 bg-red-950/60 backdrop-blur-sm hidden flex-col items-center justify-center p-6 text-center animate-pulse-fast pointer-events-none z-20">
@@ -576,8 +626,8 @@
     const labelsContainer = document.getElementById('labels-container');
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x070b14);
-    scene.fog = new THREE.FogExp2(0x070b14, 0.015);
+    scene.background = new THREE.Color(0x233747);
+    scene.fog = new THREE.FogExp2(0x233747, 0.005);
 
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 1000);
     camera.position.set(0, 48, 52);
@@ -588,6 +638,9 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
     container.appendChild(renderer.domElement);
 
     // Resize handler
@@ -599,14 +652,15 @@
     });
 
     // Factory Floor Lighting
-    const ambientLight = new THREE.AmbientLight(0x1e293b, 0.9);
+    const ambientLight = new THREE.HemisphereLight(0xd6eaff, 0x617080, 0.9);
     scene.add(ambientLight);
 
-    const mainLight = new THREE.DirectionalLight(0xfff7ed, 1.1);
+    const mainLight = new THREE.DirectionalLight(0xffeed9, 1.05);
     mainLight.position.set(30, 60, 40);
     mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 1024;
-    mainLight.shadow.mapSize.height = 1024;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.normalBias = 0.035;
     mainLight.shadow.camera.near = 10;
     mainLight.shadow.camera.far = 150;
     mainLight.shadow.camera.left = -40;
@@ -614,8 +668,11 @@
     mainLight.shadow.camera.top = 40;
     mainLight.shadow.camera.bottom = -40;
     scene.add(mainLight);
+    const rimLight = new THREE.DirectionalLight(0x9bcfff, 0.6);
+    rimLight.position.set(-28, 20, -35);
+    scene.add(rimLight);
 
-    const robotCoreLight = new THREE.PointLight(0x00e5ff, 2.0, 35);
+    const robotCoreLight = new THREE.PointLight(0x00e5ff, 0.7, 18);
     robotCoreLight.position.set(0, 4, 0);
     scene.add(robotCoreLight);
 
@@ -632,7 +689,7 @@
     scene.add(floor);
 
     // Grid lines on floor
-    const gridHelper = new THREE.GridHelper(100, 25, 0x334155, 0x1e293b);
+    const gridHelper = new THREE.GridHelper(100, 25, 0x778e9e, 0x647c8b);
     gridHelper.position.y = 0.05;
     scene.add(gridHelper);
 
@@ -657,44 +714,8 @@
     // ==========================================
     
     // 1. Central Robot Arm Assembly
-    const robotGroup = new THREE.Group();
-    // Base pedestal
-    const pedGeo = new THREE.CylinderGeometry(4.5, 5.5, 1.8, 16);
-    const pedMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
-    const pedestal = new THREE.Mesh(pedGeo, pedMat);
-    pedestal.position.y = 0.9;
-    pedestal.castShadow = true;
-    robotGroup.add(pedestal);
-
-    // Turntable
-    const turnGeo = new THREE.CylinderGeometry(3.2, 3.2, 0.8, 16);
-    const turnMat = new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.5, roughness: 0.4 });
-    const turntable = new THREE.Mesh(turnGeo, turnMat);
-    turntable.position.y = 2.1;
-    robotGroup.add(turntable);
-
-    // Arm Segment 1
-    const arm1Geo = new THREE.BoxGeometry(1.4, 5.5, 1.4);
-    const arm1Mat = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.4, roughness: 0.3 });
-    const arm1 = new THREE.Mesh(arm1Geo, arm1Mat);
-    arm1.position.set(0, 4.5, 0);
-    arm1.castShadow = true;
-    turntable.add(arm1);
-
-    // Arm Segment 2
-    const arm2Geo = new THREE.BoxGeometry(1.1, 4.8, 1.1);
-    const arm2Mat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.6, roughness: 0.2 });
-    const arm2 = new THREE.Mesh(arm2Geo, arm2Mat);
-    arm2.position.set(0, 4.5, 0);
-    arm2.castShadow = true;
-    arm1.add(arm2);
-
-    // Tool Gripper / Core
-    const gripGeo = new THREE.BoxGeometry(2.0, 0.8, 2.0);
-    const gripMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00e5ff, emissiveIntensity: 0.6 });
-    const gripper = new THREE.Mesh(gripGeo, gripMat);
-    gripper.position.y = 2.6;
-    arm2.add(gripper);
+    const robotModel = RiseRobot.create(THREE);
+    const robotGroup = robotModel.group;
 
     scene.add(robotGroup);
 
@@ -744,97 +765,16 @@
     }
     scene.add(warehouseGroup);
 
+    RiseWorkshop.build(THREE, scene, {progStationGroup, warehouseGroup, floor});
+
     // Helper: Create 3D Character Mesh
-    function createCharacter3D(vestColor = 0x0284c7, helmetColor = 0xfbbf24, toolType = null) {
-      const group = new THREE.Group();
-
-      // Body (Torso in Rise jumpsuit)
-      const bodyGeo = new THREE.CylinderGeometry(0.9, 0.8, 2.2, 10);
-      const bodyMat = new THREE.MeshStandardMaterial({ color: vestColor, roughness: 0.6 });
-      const body = new THREE.Mesh(bodyGeo, bodyMat);
-      body.position.y = 1.6;
-      body.castShadow = true;
-      group.add(body);
-
-      // High-vis Orange Safety Belt
-      const beltGeo = new THREE.CylinderGeometry(0.92, 0.92, 0.5, 10);
-      const beltMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.4 });
-      const belt = new THREE.Mesh(beltGeo, beltMat);
-      belt.position.y = 1.6;
-      group.add(belt);
-
-      // Head / Helmet
-      const headGeo = new THREE.SphereGeometry(0.65, 12, 12);
-      const headMat = new THREE.MeshStandardMaterial({ color: helmetColor, roughness: 0.3 });
-      const head = new THREE.Mesh(headGeo, headMat);
-      head.position.y = 3.2;
-      head.castShadow = true;
-      group.add(head);
-
-      // Tool holding
-      if (toolType === "PERFORATOR") {
-        const perfGeo = new THREE.BoxGeometry(0.5, 0.5, 1.8);
-        const perfMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 });
-        const drill = new THREE.Mesh(perfGeo, perfMat);
-        drill.position.set(0.8, 1.5, 0.8);
-        group.add(drill);
-      } else if (toolType === "FENCE") {
-        const fGeo = new THREE.BoxGeometry(3.5, 1.6, 0.2);
-        const fMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7 });
-        const carriedFence = new THREE.Mesh(fGeo, fMat);
-        carriedFence.position.set(0, 1.8, 0.9);
-        group.add(carriedFence);
-      } else if (toolType === "PIZZA") {
-        const pzGeo = new THREE.BoxGeometry(1.6, 0.3, 1.6);
-        const pzMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
-        const pizza = new THREE.Mesh(pzGeo, pzMat);
-        pizza.position.set(0.7, 1.8, 0.7);
-        group.add(pizza);
-      }
-
-      return group;
+    function createCharacter3D(jacketColor = 0x124b77, helmetColor = 0xf97316, tool = null, name = '', role = 'crew') {
+      return RiseCharacters.create(THREE, {jacketColor, helmetColor, tool, name, role});
     }
 
     // Helper: Create 3D Fence Model
     function createFence3D() {
-      const group = new THREE.Group();
-
-      // Posts (2 steel vertical posts)
-      const postGeo = new THREE.CylinderGeometry(0.18, 0.25, 2.8, 8);
-      const postMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
-      
-      const post1 = new THREE.Mesh(postGeo, postMat);
-      post1.position.set(-2.8, 1.4, 0);
-      post1.castShadow = true;
-      group.add(post1);
-
-      const post2 = new THREE.Mesh(postGeo, postMat);
-      post2.position.set(2.8, 1.4, 0);
-      post2.castShadow = true;
-      group.add(post2);
-
-      // Top Safety Bar (Bright Orange)
-      const topBarGeo = new THREE.BoxGeometry(6.0, 0.3, 0.3);
-      const topBarMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.3 });
-      const topBar = new THREE.Mesh(topBarGeo, topBarMat);
-      topBar.position.y = 2.6;
-      group.add(topBar);
-
-      // Steel Safety Mesh Panel
-      const meshGeo = new THREE.BoxGeometry(5.4, 2.0, 0.15);
-      const meshMat = new THREE.MeshStandardMaterial({ 
-        color: 0x38bdf8, 
-        metalness: 0.6, 
-        roughness: 0.4,
-        transparent: true,
-        opacity: 0.85
-      });
-      const meshPanel = new THREE.Mesh(meshGeo, meshMat);
-      meshPanel.position.y = 1.3;
-      meshPanel.castShadow = true;
-      group.add(meshPanel);
-
-      return group;
+      return RiseWorkshop.createFence(THREE);
     }
 
     // ==========================================
@@ -878,6 +818,8 @@
       danil: null,
       semyon: null,
       sasha: null,
+      ilya: null,
+      vasya: null,
       andrey: null, // Active summoned Andrey instance
 
       screenShake: 0
@@ -961,12 +903,12 @@
     // Initialize Heroes
     function initHeroes3D() {
       // Clean up previous 3D models
-      [state.danil, state.semyon, state.sasha, state.andrey].forEach(h => {
+      [state.danil, state.semyon, state.sasha, state.ilya, state.vasya, state.andrey].forEach(h => {
         if (h && h.mesh) scene.remove(h.mesh);
       });
 
       // Danil (Drill)
-      const danilMesh = createCharacter3D(0x0284c7, 0xea580c, "PERFORATOR");
+      const danilMesh = createCharacter3D(0x124b77, 0xea580c, "PERFORATOR", 'Данил');
       danilMesh.position.set(-5, 0, 2);
       scene.add(danilMesh);
       state.danil = {
@@ -980,7 +922,7 @@
       };
 
       // Semyon (Carrying fence)
-      const semyonMesh = createCharacter3D(0x0284c7, 0xf59e0b, "FENCE");
+      const semyonMesh = createCharacter3D(0x175b85, 0xf59e0b, "FENCE", 'Семён');
       semyonMesh.position.set(-28, 0, 18);
       scene.add(semyonMesh);
       state.semyon = {
@@ -994,7 +936,7 @@
       };
 
       // Sasha (Mounting)
-      const sashaMesh = createCharacter3D(0x0284c7, 0xea580c);
+      const sashaMesh = createCharacter3D(0x124b77, 0xea580c, 'WRENCH', 'Саша');
       sashaMesh.position.set(5, 0, 2);
       scene.add(sashaMesh);
       state.sasha = {
@@ -1007,15 +949,17 @@
       };
 
       // Programmers Seated Models
-      const ilyaMesh = createCharacter3D(0x3b82f6, 0x64748b);
+      const ilyaMesh = createCharacter3D(0x235681, 0xe0e6ed, null, 'Илья', 'programmer');
       ilyaMesh.position.set(-2.5, 0, 9);
       ilyaMesh.rotation.y = Math.PI;
       scene.add(ilyaMesh);
+      state.ilya = {name: 'Илья', x: -2.5, z: 9, mesh: ilyaMesh};
 
-      const vasyaMesh = createCharacter3D(0x6366f1, 0x475569);
+      const vasyaMesh = createCharacter3D(0x354e78, 0xe0e6ed, null, 'Вася', 'programmer');
       vasyaMesh.position.set(2.5, 0, 9);
       vasyaMesh.rotation.y = Math.PI;
       scene.add(vasyaMesh);
+      state.vasya = {name: 'Вася', x: 2.5, z: 9, mesh: vasyaMesh};
 
       state.andrey = null;
     }
@@ -1091,13 +1035,13 @@
         hp = 35;
         speed = 0.65;
         damage = 4;
-        mesh = createCharacter3D(0x0284c7, 0x38bdf8);
+        mesh = createCharacter3D(0x64736a, 0xf3d260, 'WRENCH', name, 'electrician');
       } else if (type === 'MINI_BOSS') {
         name = "Начальник цеха";
         hp = 380;
         speed = 0.28;
         damage = 15;
-        mesh = createCharacter3D(0x78350f, 0xffffff);
+        mesh = createCharacter3D(0x79523c, 0xffffff, 'CLIPBOARD', name, 'foreman');
         mesh.scale.set(1.4, 1.4, 1.4);
       } else if (type === 'FINAL_BOSS') {
         // ==========================================
@@ -1116,6 +1060,38 @@
         chassis.position.y = 1.6;
         chassis.castShadow = true;
         vehicleGroup.add(chassis);
+        // Rubber tires, hubs, cabin frame and real commission passengers.
+        const tireMat = new THREE.MeshStandardMaterial({color: 0x17212b, roughness: 0.95});
+        const hubMat = new THREE.MeshStandardMaterial({color: 0x8896a2, metalness: 0.75, roughness: 0.35});
+        for (const x of [-3.5, 3.5]) {
+          for (const z of [-2.8, 2.8]) {
+            const wheel = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, 0.8, 20), tireMat);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(x, 1.25, z);
+            wheel.castShadow = true;
+            vehicleGroup.add(wheel);
+            const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.57, 0.57, 0.84, 12), hubMat);
+            hub.rotation.z = Math.PI / 2;
+            hub.position.copy(wheel.position);
+            vehicleGroup.add(hub);
+          }
+        }
+        for (const x of [-2.7, 2.7]) {
+          for (const z of [-2, 2]) {
+            const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.22, 5.4, 0.22), hubMat);
+            pillar.position.set(x, 5.1, z);
+            vehicleGroup.add(pillar);
+          }
+        }
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(6.1, 0.3, 5), chassisMat);
+        roof.position.set(0, 7.9, 0); vehicleGroup.add(roof);
+        for (const [x, name] of [[-1.7, 'Комиссия: приёмка'], [1.7, 'Комиссия: аудит']]) {
+          const inspector = createCharacter3D(0x465465, 0xffffff, 'CLIPBOARD', name, 'director');
+          inspector.scale.setScalar(0.85);
+          inspector.position.set(x, 2.8, 1.6);
+          inspector.rotation.y = Math.PI;
+          vehicleGroup.add(inspector);
+        }
 
         // Heavy Cowcatcher Ram on front
         const ramGeo = new THREE.BoxGeometry(7.2, 2.0, 1.6);
@@ -1130,18 +1106,20 @@
         const beaconMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
         const beacon = new THREE.Mesh(beaconGeo, beaconMat);
         beacon.position.set(0, 3.2, 0);
+        beacon.position.y = 8.35;
         vehicleGroup.add(beacon);
 
         // Gen Director in cabin with white VIP helmet
-        const dirMesh = createCharacter3D(0x1e293b, 0xffffff);
+        const dirMesh = createCharacter3D(0x1e293b, 0xffffff, 'CLIPBOARD', 'Гендиректор', 'director');
         dirMesh.position.set(0, 2.8, -1.0);
+        dirMesh.rotation.y = Math.PI;
         vehicleGroup.add(dirMesh);
 
         mesh = vehicleGroup;
         sfx.playBossRoar();
       } else {
         // Basic Worker
-        mesh = createCharacter3D(0x475569, 0xf87171);
+        mesh = createCharacter3D(0x697577, 0xf2c166, null, name, 'worker');
       }
 
       mesh.position.set(x, 0, z);
@@ -1478,7 +1456,7 @@
       sfx.playLaser();
 
       // Spawn Andrey OUTSIDE the fences at North Gate!
-      const andreyMesh = createCharacter3D(0x4f46e5, 0x818cf8, "PIZZA");
+      const andreyMesh = createCharacter3D(0x354e78, 0xffffff, "PIZZA", 'Андрей');
       andreyMesh.position.set(0, 0, -22);
       scene.add(andreyMesh);
 
@@ -1781,6 +1759,163 @@
       document.getElementById('ui-enemies').innerText = state.enemies.length;
     }
 
+    // Close views pause the shift, so the player can read the actual jacket decals.
+    const cameraView = {focus: 'overview', side: 0, zoom: 1, pausedForInspection: false};
+    const inspectionScene = new THREE.Scene();
+    inspectionScene.background = new THREE.Color(0x1c2d3d);
+    inspectionScene.add(new THREE.HemisphereLight(0xe6f1ff, 0x567083, 0.9));
+    const inspectionKey = new THREE.DirectionalLight(0xfff1e2, 1);
+    inspectionKey.position.set(5, 8, 7);
+    inspectionScene.add(inspectionKey);
+    const inspectionRim = new THREE.DirectionalLight(0xa8d8ff, 0.7);
+    inspectionRim.position.set(-4, 5, -6);
+    inspectionScene.add(inspectionRim);
+    const displayPlatform = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.5, 0.18, 40),
+      new THREE.MeshStandardMaterial({color: 0x304b60, roughness: 0.8}));
+    displayPlatform.position.y = -0.1;
+    inspectionScene.add(displayPlatform);
+    const inspectionModels = new Map();
+    let inspectionModel = null;
+    let pausedAt = 0;
+    let nextWavePending = null;
+    let nextWaveTimer = null;
+    let nextWaveDueAt = 0;
+    let nextWaveRemaining = 0;
+    const cameraFocusSelect = document.getElementById('camera-focus');
+    const cameraCaption = document.getElementById('camera-caption');
+    const pauseButton = document.getElementById('btn-pause');
+    function setPaused(paused) {
+      if (state.paused === paused) return;
+      if (paused) {
+        pausedAt = Date.now();
+        if (nextWaveTimer !== null) {
+          clearTimeout(nextWaveTimer);
+          nextWaveTimer = null;
+          nextWaveRemaining = Math.max(0, nextWaveDueAt - pausedAt);
+        }
+      }
+      else {
+        const elapsed = Date.now() - pausedAt;
+        if (state.waveStartTime) state.waveStartTime += elapsed;
+        if (state.andrey) state.andrey.startTime += elapsed;
+      }
+      state.paused = paused;
+      pauseButton.textContent = paused ? 'Продолжить' : 'Пауза';
+      pauseButton.setAttribute('aria-pressed', String(paused));
+      if (!paused && nextWavePending !== null && state.running) {
+        scheduleNextWave(nextWavePending, nextWaveRemaining);
+      }
+    }
+    function scheduleNextWave(wave, delay) {
+      nextWavePending = wave;
+      nextWaveRemaining = delay;
+      if (state.paused) return;
+      nextWaveDueAt = Date.now() + delay;
+      nextWaveTimer = setTimeout(() => {
+        nextWaveTimer = null;
+        nextWaveRemaining = 0;
+        const pending = nextWavePending;
+        nextWavePending = null;
+        if (state.running && !state.paused && pending !== null) startWave(pending);
+      }, delay);
+    }
+    function selectCamera(focus) {
+      if (focus === 'overview') {
+        if (cameraView.pausedForInspection) setPaused(false);
+        cameraView.pausedForInspection = false;
+      } else if (cameraView.focus === 'overview' && state.running && !state.paused) {
+        cameraView.pausedForInspection = true;
+        setPaused(true);
+      }
+      cameraView.focus = focus;
+      cameraView.side = 0;
+      cameraView.zoom = 1;
+      cameraFocusSelect.value = focus;
+      if (!state.running) document.getElementById('game-modal').classList.toggle('hidden', focus !== 'overview');
+      if (inspectionModel) inspectionScene.remove(inspectionModel);
+      inspectionModel = null;
+      if (focus !== 'overview') {
+        if (!inspectionModels.has(focus)) {
+          if (focus === 'robot') inspectionModels.set(focus, RiseRobot.create(THREE).group);
+          else {
+          const looks = {
+            danil: [0x124b77, 0xea580c, 'PERFORATOR', 'Данил', 'crew'],
+            semyon: [0x175b85, 0xf59e0b, 'FENCE', 'Семён', 'crew'],
+            sasha: [0x124b77, 0xea580c, 'WRENCH', 'Саша', 'crew'],
+            ilya: [0x235681, 0xe0e6ed, null, 'Илья', 'programmer'],
+            vasya: [0x354e78, 0xe0e6ed, null, 'Вася', 'programmer']
+          };
+          inspectionModels.set(focus, createCharacter3D(...looks[focus]));
+          }
+        }
+        inspectionModel = inspectionModels.get(focus);
+        inspectionScene.add(inspectionModel);
+      }
+      displayPlatform.scale.setScalar(focus === 'robot' ? 2.1 : 1);
+      cameraCaption.textContent = focus === 'overview'
+        ? 'Выбери сотрудника, чтобы рассмотреть форму'
+        : `Осмотр: ${focus === 'robot' ? 'KUKA KR500HA r2300' : state[focus].name}${state.running ? ' · смена на паузе' : ''}`;
+    }
+    cameraFocusSelect.addEventListener('change', () => selectCamera(cameraFocusSelect.value));
+    document.getElementById('camera-front').addEventListener('click', () => {cameraView.side = 0;});
+    document.getElementById('camera-back').addEventListener('click', () => {cameraView.side = Math.PI;});
+    document.getElementById('camera-side').addEventListener('click', () => {cameraView.side = Math.PI / 2;});
+    function zoomCamera(amount) {cameraView.zoom = Math.max(0.65, Math.min(1.5, cameraView.zoom + amount));}
+    document.getElementById('camera-zoom-in').addEventListener('click', () => zoomCamera(-0.12));
+    document.getElementById('camera-zoom-out').addEventListener('click', () => zoomCamera(0.12));
+    document.getElementById('camera-reset').addEventListener('click', () => selectCamera('overview'));
+    pauseButton.addEventListener('click', () => {
+      if (!state.running) return;
+      if (cameraView.focus !== 'overview') {
+        cameraView.pausedForInspection = false;
+        selectCamera('overview');
+        setPaused(false);
+        return;
+      }
+      cameraView.pausedForInspection = false;
+      setPaused(!state.paused);
+    });
+    container.addEventListener('wheel', evt => {
+      evt.preventDefault();
+      zoomCamera(evt.deltaY > 0 ? 0.08 : -0.08);
+    }, {passive: false});
+    const cameraTarget = new THREE.Vector3();
+    function updateCamera() {
+      if (inspectionModel) {
+        const robot = cameraView.focus === 'robot';
+        const angle = cameraView.side + (robot ? 0.35 : 0.16);
+        const distance = (robot ? 24 : container.clientWidth < 600 ? 8.8 : 7.5) * cameraView.zoom;
+        cameraTarget.set(robot ? -1 : 0, robot ? 6 : 2.25, 0);
+        camera.position.set(cameraTarget.x + Math.sin(angle) * distance, robot ? 13 : 4.15, cameraTarget.z + Math.cos(angle) * distance);
+      } else {
+        cameraTarget.set(0, 0, 2);
+        camera.position.set(0, 48 * cameraView.zoom, 52 * cameraView.zoom);
+      }
+      if (state.screenShake > 0 && !state.paused) {
+        camera.position.x += (Math.random() - 0.5) * state.screenShake * 0.2;
+        camera.position.z += (Math.random() - 0.5) * state.screenShake * 0.2;
+        state.screenShake *= 0.88;
+        if (state.screenShake < 0.2) state.screenShake = 0;
+      }
+      camera.lookAt(cameraTarget);
+    }
+    function animatePeople(time) {
+      const people = [state.danil, state.semyon, state.sasha, state.ilya, state.vasya, state.andrey, ...state.enemies];
+      for (const person of people) {
+        if (!person || !person.mesh) continue;
+        const previous = person.mesh.userData.previousPosition;
+        const walking = previous && Math.hypot(person.x - previous.x, person.z - previous.z) > 0.003;
+        RiseCharacters.animate(person.mesh, {
+          walking: !!walking,
+          working: person.isDrilling || person.state === 'MOUNTING' || person === state.ilya || person === state.vasya,
+          carrying: person === state.semyon && person.hasFence,
+          time
+        });
+        if (previous) {previous.x = person.x; previous.z = person.z;}
+        else person.mesh.userData.previousPosition = {x: person.x, z: person.z};
+      }
+    }
+
     // ==========================================
     // 3D RENDER LOOP
     // ==========================================
@@ -1806,11 +1941,10 @@
         // Updates
         updateCrew3D();
         updateEnemies3D();
+        animatePeople(performance.now() * 0.001);
       }
 
-      // Robot turntable idle animation
-      turntable.rotation.y = Math.sin(Date.now() * 0.001) * 0.8;
-      arm1.rotation.z = Math.sin(Date.now() * 0.0015) * 0.25;
+      if (!state.paused) robotModel.update(performance.now() * 0.001);
 
       // Update 3D particles
       for (let i = state.particles.length - 1; i >= 0; i--) {
@@ -1833,16 +1967,11 @@
         }
       }
 
-      // Camera screen shake
-      if (state.screenShake > 0) {
-        camera.position.x = (Math.random() - 0.5) * state.screenShake * 0.2;
-        camera.position.z = 52 + (Math.random() - 0.5) * state.screenShake * 0.2;
-        state.screenShake *= 0.88;
-        if (state.screenShake < 0.2) state.screenShake = 0;
-      }
+      updateCamera();
 
-      renderer.render(scene, camera);
-      render2DLabels();
+      renderer.render(inspectionModel ? inspectionScene : scene, camera);
+      if (inspectionModel) labelsContainer.innerHTML = '';
+      else render2DLabels();
     }
 
     // Render HTML labels synced to 3D positions
@@ -1860,7 +1989,7 @@
           continue;
         }
 
-        const screenPos = toScreenPosition(sb.target.x, 3.8, sb.target.z, w, h);
+        const screenPos = toScreenPosition(sb.target.x, 4.8, sb.target.z, w, h);
         if (screenPos) {
           const div = document.createElement('div');
           div.className = 'world-label px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-lg border border-slate-700 backdrop-blur-md';
@@ -1910,11 +2039,7 @@
       if (state.wave >= state.maxWaves) {
         victory();
       } else {
-        setTimeout(() => {
-          if (state.running) {
-            startWave(state.wave + 1);
-          }
-        }, 4000);
+        scheduleNextWave(state.wave + 1, 4000);
       }
     }
 
@@ -1938,8 +2063,20 @@
 
     function startGame() {
       sfx.init();
+      // A fresh shift removes all old actors, including the two programmers.
+      state.enemies.forEach(e => scene.remove(e.mesh));
+      state.particles.forEach(p => {if (p.mesh) scene.remove(p.mesh);});
+      state.enemies = [];
+      state.particles = [];
+      state.speechBubbles = [];
+      if (nextWaveTimer !== null) clearTimeout(nextWaveTimer);
+      nextWaveTimer = null;
+      nextWavePending = null;
+      selectCamera('overview');
       state.running = true;
       state.paused = false;
+      pauseButton.textContent = 'Пауза';
+      pauseButton.setAttribute('aria-pressed', 'false');
       state.robotHp = state.robotMaxHp;
       state.superPoints = 0;
       state.funds = 100;
@@ -1993,6 +2130,7 @@
         label.innerText = "ОТВЛЕЧЬ МОНТАЖНИКОВ НА КОД-РЕВЬЮ!";
         btnDistract.className = "px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-tech font-black tracking-wider shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 transform active:scale-95";
       }
+      updateUIStatus();
     });
 
     // Super Skills Listeners
@@ -2039,6 +2177,7 @@
     const mouse = new THREE.Vector2();
 
     container.addEventListener('click', (evt) => {
+      if (!state.running || state.paused || evt.target !== renderer.domElement) return;
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((evt.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((evt.clientY - rect.top) / rect.height) * 2 + 1;
