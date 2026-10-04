@@ -235,7 +235,7 @@
     b.cyl(arm2, .55, .55, .95, C.dark, .34, .83, -1.24, .28, 18).rotation.x = Math.PI / 2;
     b.cyl(arm2, .34, .34, .22, C.steel, .34, .83, -1.82, .75, 18).rotation.x = Math.PI / 2;
 
-    // A4-A6: nested wrist axes and an industrial two-finger end effector.
+    // A4-A6: nested wrist axes and a compact milling spindle.
     const axis4 = new THREE.Group();
     axis4.position.set(-7.13, -.40, 0);
     arm2.add(axis4);
@@ -246,22 +246,56 @@
     axis4.add(axis5);
     b.cyl(axis5, .53, .53, .62, C.orange, -.25, 0, 0, .18, 20).rotation.z = Math.PI / 2;
     b.cyl(axis5, .48, .48, .13, C.dark, -.63, 0, 0, .4, 20).rotation.z = Math.PI / 2;
-    const gripper = new THREE.Group();
-    gripper.position.x = -.69;
-    axis5.add(gripper);
-    b.cyl(gripper, .43, .43, .25, C.silver, -.12, 0, 0, .9, 22).rotation.z = Math.PI / 2;
-    b.cyl(gripper, .32, .32, .19, C.dark, -.28, 0, 0, .55, 22).rotation.z = Math.PI / 2;
-    b.box(gripper, .78, .82, .80, C.dark, -.73, 0, 0, .35);
-    b.box(gripper, .13, .95, .89, C.steel, -1.17, 0, 0, .8);
-    b.box(gripper, .72, .22, .56, C.dark, -1.30, .42, 0, .4);
-    b.box(gripper, .72, .22, .56, C.dark, -1.30, -.42, 0, .4);
-    for (const y of [-.42, .42]) {
-      b.box(gripper, 1.18, .15, .33, C.steel, -1.84, y, 0, .8);
-      b.box(gripper, .22, .24, .34, C.dark, -2.39, y > 0 ? y - .09 : y + .09, 0, .3);
+    const spindle = new THREE.Group();
+    spindle.position.x = -.69;
+    axis5.add(spindle);
+    // The adapter overlaps the A6 flange; every subsequent sleeve overlaps it.
+    b.cyl(spindle, .43, .43, .27, C.silver, -.12, 0, 0, .9, 24).rotation.z = Math.PI / 2;
+    b.cyl(spindle, .37, .37, .19, C.dark, -.31, 0, 0, .5, 24).rotation.z = Math.PI / 2;
+    b.cyl(spindle, .50, .50, 1.23, C.dark, -.96, 0, 0, .32, 26).rotation.z = Math.PI / 2;
+    b.cyl(spindle, .52, .52, .16, C.steel, -.43, 0, 0, .72, 24).rotation.z = Math.PI / 2;
+    for (let i = 0; i < 6; i++) {
+      b.cyl(spindle, .535, .535, .055, C.rubber,
+        -.62 - i * .16, 0, 0, .22, 24).rotation.z = Math.PI / 2;
     }
+    b.cyl(spindle, .43, .30, .42, C.steel, -1.75, 0, 0, .75, 24).rotation.z = Math.PI / 2;
+    b.cyl(spindle, .22, .22, .30, C.silver, -2.08, 0, 0, .85, 24).rotation.z = Math.PI / 2;
+    b.cyl(spindle, .14, .14, .21, C.dark, -2.27, 0, 0, .45, 18).rotation.z = Math.PI / 2;
+    b.cyl(spindle, .085, .085, .69, C.silver, -2.70, 0, 0, .9, 14).rotation.z = Math.PI / 2;
+    b.cyl(spindle, .014, .085, .16, C.silver, -3.12, 0, 0, .9, 14).rotation.z = Math.PI / 2;
+    // Three dark spiral flute grooves keep the cutter readable in close view.
+    for (let flute = 0; flute < 3; flute++) {
+      const points = [];
+      for (let i = 0; i <= 12; i++) {
+        const x = -2.38 - i * .053;
+        const a = flute * Math.PI * 2 / 3 + i * .42;
+        points.push([x, Math.cos(a) * .086, Math.sin(a) * .086]);
+      }
+      b.tube(spindle, points, .012, C.dark, .2);
+    }
+    // Both raised push buttons face +z, the inspection camera side.
+    b.box(spindle, 1.11, .47, .12, C.steel, -.99, .13, .51, .7);
+    const buttonColors = [0xffdd16, 0x0875f5];
+    const buttons = [];
+    for (let i = 0; i < 2; i++) {
+      const x = -.76 - i * .48;
+      b.cyl(spindle, .235, .235, .105, C.dark, x, .14, .62, .35, 24).rotation.x = Math.PI / 2;
+      b.cyl(spindle, .207, .207, .045, C.silver, x, .14, .688, .8, 24).rotation.x = Math.PI / 2;
+      const capMaterial = new THREE.MeshBasicMaterial({ color: buttonColors[i], toneMapped: false });
+      capMaterial.color.convertSRGBToLinear();
+      const cap = new THREE.Mesh(r.cylinder(.185, .185, .125, 24), capMaterial);
+      cap.position.set(x, .14, .765);
+      cap.rotation.x = Math.PI / 2;
+      cap.castShadow = true;
+      spindle.add(cap);
+      buttons.push(cap);
+    }
+    spindle.userData.buttons = { yellow: buttons[0], blue: buttons[1] };
+    b.tube(spindle, [[.04,.29,-.32],[-.24,.55,-.38],[-.59,.57,-.42],[-1.15,.50,-.39]], .075, C.rubber);
+    b.box(spindle, .20, .18, .21, C.dark, -.55, .50, -.38, .3);
     for (let i = 0; i < 6; i++) {
       const angle = i * Math.PI / 3;
-      const bolt = b.cyl(gripper, .055, .055, .07, C.dark,
+      const bolt = b.cyl(spindle, .055, .055, .07, C.dark,
         -.10, Math.cos(angle) * .35, Math.sin(angle) * .35, .35, 6, false);
       bolt.rotation.z = Math.PI / 2;
     }
@@ -273,10 +307,10 @@
       arm2.rotation.z = Math.sin(t * .33 + .6) * .055;
       axis4.rotation.x = Math.sin(t * .27) * .10;
       axis5.rotation.z = Math.sin(t * .25 + .4) * .055;
-      gripper.rotation.x = Math.sin(t * .37) * .065;
+      spindle.rotation.x = Math.sin(t * .37) * .065;
     }
     update(0);
-    return { group: group, turntable: turntable, arm1: arm1, arm2: arm2, gripper: gripper, update: update };
+    return { group: group, turntable: turntable, arm1: arm1, arm2: arm2, spindle: spindle, update: update };
   }
 
   window.RiseRobot = { create: create };
