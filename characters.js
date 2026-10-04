@@ -21,11 +21,16 @@
       },
       material(color, metalness, roughness) {
         const key = [color, metalness || 0, roughness === undefined ? .72 : roughness].join('/');
-        if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({
-          color: color,
-          metalness: metalness || 0,
-          roughness: roughness === undefined ? .72 : roughness
-        }));
+        if (!materials.has(key)) {
+          const material = new THREE.MeshStandardMaterial({
+            color: color,
+            metalness: metalness || 0,
+            roughness: roughness === undefined ? .72 : roughness
+          });
+          // Hex palette values are authored in sRGB; r128 material colors are linear.
+          material.color.convertSRGBToLinear();
+          materials.set(key, material);
+        }
         return materials.get(key);
       },
       label(text, size, background) {
@@ -42,12 +47,19 @@
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.font = '900 ' + size + 'px Arial, Helvetica, sans-serif';
-        ctx.fillText(text, 512, 256, 940);
+        if (text === 'RISE\nAUTOMATION') {
+          ctx.font = '900 310px Arial, Helvetica, sans-serif';
+          ctx.fillText('RISE', 512, 155, 940);
+          ctx.font = '900 190px Arial, Helvetica, sans-serif';
+          ctx.fillText('AUTOMATION', 512, 365, 940);
+        } else {
+          ctx.font = '900 ' + size + 'px Arial, Helvetica, sans-serif';
+          ctx.fillText(text, 512, 256, 940);
+        }
         const texture = new THREE.CanvasTexture(canvas);
         texture.encoding = THREE.sRGBEncoding;
         texture.anisotropy = 4;
-        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
         labels.set(key, material);
         return material;
       }
@@ -311,12 +323,16 @@
     if (branded) {
       // Each plane faces outwards; the rear plane is rotated, so its writing is never mirrored.
       b.box(body, 1.19, .51, .018, 0x102b49, 0, 2.91, .365);
-      b.decal(body, 'RISE AUTOMATION', 230, null, 1.13, .42, 0, 2.91, .378, false);
+      b.decal(body, 'RISE\nAUTOMATION', 310, null, 1.13, .46, 0, 2.91, .378, false);
       b.box(body, 1.42, .70, .018, 0x102b49, 0, 2.77, -.365);
       b.decal(body, 'RISE', 380, null, 1.35, .38, 0, 2.92, -.378, true);
       b.decal(body, 'AUTOMATION', 265, null, 1.35, .28, 0, 2.63, -.378, true);
       b.box(body, .20, .19, .035, 0xf97316, -.63, 3.04, .38);
       b.decal(body, 'R', 205, null, .16, .14, -.63, 3.04, .405, false);
+      if (options.name) {
+        b.box(body, .52, .18, .035, 0x152c45, .48, 2.57, .422);
+        b.decal(body, String(options.name), 185, null, .48, .14, .48, 2.57, .447, false);
+      }
     } else {
       b.box(body, 1.50, .15, .040, 0x919a9c, 0, 2.91, .37);
       b.box(body, 1.50, .15, .040, 0x919a9c, 0, 2.91, -.37);
