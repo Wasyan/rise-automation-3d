@@ -1778,12 +1778,22 @@
     let inspectionModel = null;
     let pausedAt = 0;
     let nextWavePending = null;
+    let nextWaveTimer = null;
+    let nextWaveDueAt = 0;
+    let nextWaveRemaining = 0;
     const cameraFocusSelect = document.getElementById('camera-focus');
     const cameraCaption = document.getElementById('camera-caption');
     const pauseButton = document.getElementById('btn-pause');
     function setPaused(paused) {
       if (state.paused === paused) return;
-      if (paused) pausedAt = Date.now();
+      if (paused) {
+        pausedAt = Date.now();
+        if (nextWaveTimer !== null) {
+          clearTimeout(nextWaveTimer);
+          nextWaveTimer = null;
+          nextWaveRemaining = Math.max(0, nextWaveDueAt - pausedAt);
+        }
+      }
       else {
         const elapsed = Date.now() - pausedAt;
         if (state.waveStartTime) state.waveStartTime += elapsed;
@@ -1793,10 +1803,21 @@
       pauseButton.textContent = paused ? 'Продолжить' : 'Пауза';
       pauseButton.setAttribute('aria-pressed', String(paused));
       if (!paused && nextWavePending !== null && state.running) {
-        const wave = nextWavePending;
-        nextWavePending = null;
-        startWave(wave);
+        scheduleNextWave(nextWavePending, nextWaveRemaining);
       }
+    }
+    function scheduleNextWave(wave, delay) {
+      nextWavePending = wave;
+      nextWaveRemaining = delay;
+      if (state.paused) return;
+      nextWaveDueAt = Date.now() + delay;
+      nextWaveTimer = setTimeout(() => {
+        nextWaveTimer = null;
+        nextWaveRemaining = 0;
+        const pending = nextWavePending;
+        nextWavePending = null;
+        if (state.running && !state.paused && pending !== null) startWave(pending);
+      }, delay);
     }
     function selectCamera(focus) {
       if (focus === 'overview') {
@@ -2018,12 +2039,7 @@
       if (state.wave >= state.maxWaves) {
         victory();
       } else {
-        setTimeout(() => {
-          if (state.running) {
-            if (state.paused) nextWavePending = state.wave + 1;
-            else startWave(state.wave + 1);
-          }
-        }, 4000);
+        scheduleNextWave(state.wave + 1, 4000);
       }
     }
 
@@ -2053,6 +2069,8 @@
       state.enemies = [];
       state.particles = [];
       state.speechBubbles = [];
+      if (nextWaveTimer !== null) clearTimeout(nextWaveTimer);
+      nextWaveTimer = null;
       nextWavePending = null;
       selectCamera('overview');
       state.running = true;
@@ -2112,6 +2130,7 @@
         label.innerText = "ОТВЛЕЧЬ МОНТАЖНИКОВ НА КОД-РЕВЬЮ!";
         btnDistract.className = "px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-tech font-black tracking-wider shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 transform active:scale-95";
       }
+      updateUIStatus();
     });
 
     // Super Skills Listeners
