@@ -8,16 +8,28 @@
   function resources(THREE) {
     if (worlds.has(THREE)) return worlds.get(THREE);
     const boxes = new Map();
+    const tapers = new Map();
     const materials = new Map();
     const labels = new Map();
     const value = {
-      sphere: new THREE.SphereGeometry(1, 12, 9),
+      sphere: new THREE.SphereGeometry(1, 16, 12),
       cylinder: new THREE.CylinderGeometry(1, 1, 1, 12),
+      glassesRing: new THREE.TorusGeometry(.064, .007, 5, 14),
+      head: new THREE.LatheGeometry([
+        [0, -.36], [.11, -.34], [.17, -.30], [.205, -.23],
+        [.25, -.10], [.275, .02], [.285, .14], [.27, .24],
+        [.22, .32], [.08, .36], [0, .37]
+      ].map(p => new THREE.Vector2(p[0], p[1])), 20),
       plane: new THREE.PlaneGeometry(1, 1),
       box(w, h, d) {
         const key = [w, h, d].join('/');
         if (!boxes.has(key)) boxes.set(key, new THREE.BoxGeometry(w, h, d));
         return boxes.get(key);
+      },
+      taper(top, bottom) {
+        const key = top + '/' + bottom;
+        if (!tapers.has(key)) tapers.set(key, new THREE.CylinderGeometry(top, bottom, 1, 16));
+        return tapers.get(key);
       },
       material(color, metalness, roughness) {
         const key = [color, metalness || 0, roughness === undefined ? .72 : roughness].join('/');
@@ -87,6 +99,9 @@
       cylinder(parent, sx, sy, sz, color, x, y, z, shadow, metalness) {
         return mesh(parent, r.cylinder, r.material(color, metalness), x, y, z, sx, sy, sz, shadow);
       },
+      taper(parent, top, bottom, sx, sy, sz, color, x, y, z, shadow) {
+        return mesh(parent, r.taper(top, bottom), r.material(color), x, y, z, sx, sy, sz, shadow);
+      },
       decal(parent, text, font, background, w, h, x, y, z, back) {
         const item = mesh(parent, r.plane, r.label(text, font, background), x, y, z, w, h, 1, false);
         if (back) item.rotation.y = Math.PI;
@@ -105,73 +120,88 @@
   function makeFace(THREE, b, parent, skin, role, variant, helmetColor, r) {
     const hair = [0x2a211c, 0x51382a, 0x211c20, 0x76533a][variant % 4];
     const beard = variant % 3 === 0 || role === 'foreman' || role === 'director';
-    b.cylinder(parent, .16, .22, .16, skin, 0, 3.39, .02);
-    b.ball(parent, .39, .46, .34, skin, 0, 3.77, 0, true);
-    b.ball(parent, .085, .15, .075, skin, -.39, 3.78, 0);
-    b.ball(parent, .085, .15, .075, skin, .39, 3.78, 0);
-    b.ball(parent, .095, .13, .12, skin, 0, 3.72, .34);
-    b.box(parent, .12, .055, .025, 0xffffff, -.15, 3.83, .321);
-    b.box(parent, .12, .055, .025, 0xffffff, .15, 3.83, .321);
-    b.ball(parent, .032, .04, .02, 0x1c2835, -.15, 3.83, .342);
-    b.ball(parent, .032, .04, .02, 0x1c2835, .15, 3.83, .342);
-    b.box(parent, .35, .045, .045, hair, 0, 3.98, .32);
-    b.box(parent, .20, .025, .02, 0x6b3936, 0, 3.58, .33);
-    if (beard) {
-      b.ball(parent, .24, .12, .095, hair, 0, 3.51, .28);
+    const shade = [0xbd7959, 0xa97052, 0xc68d69][variant % 3];
+    b.taper(parent, .78, 1, .15, .25, .15, skin, 0, 3.39, .01);
+    const head = new THREE.Mesh(r.head, r.material(skin));
+    head.position.y = 3.75;
+    head.scale.z = .92;
+    head.castShadow = true;
+    parent.add(head);
+    for (const side of [-1, 1]) {
+      b.ball(parent, .039, .086, .045, skin, side * .279, 3.75, -.005); // ears close to skull
+      b.ball(parent, .012, .041, .008, shade, side * .311, 3.748, .024);
+      b.ball(parent, .055, .018, .011, 0xd7c9b7, side * .108, 3.805, .238); // narrow sclera
+      b.ball(parent, .018, .019, .009, 0x34414b, side * .108, 3.805, .250);
+      b.ball(parent, .066, .013, .018, skin, side * .108, 3.827, .239); // upper eyelid
+      const brow = b.ball(parent, .068, .011, .014, hair, side * .108, 3.873, .234);
+      brow.rotation.z = -side * .10;
     }
-    // The hair is visible under a distinct hard hat, rather than replacing the face.
-    b.ball(parent, .39, .18, .32, hair, 0, 4.09, -.045);
+    b.ball(parent, .033, .10, .040, skin, 0, 3.733, .255); // nose bridge
+    b.ball(parent, .044, .032, .038, skin, 0, 3.675, .277); // nose tip
+    b.ball(parent, .067, .010, .010, 0x965f55, 0, 3.565, .207); // lips
+    if (beard) {
+      b.ball(parent, .10, .024, .007, hair, 0, 3.615, .212); // close-cut moustache
+      b.ball(parent, .105, .035, .008, hair, 0, 3.484, .181); // small chin patch
+    }
+    b.ball(parent, .273, .045, .247, hair, 0, 4.055, -.012);
     if (role === 'programmer' || role === 'director' || variant % 5 === 0) {
       const glasses = r.material(0x202938, .15, .28);
-      const lens = r.box(.24, .16, .025);
       for (const x of [-.16, .16]) {
-        const rim = new THREE.Mesh(lens, glasses);
-        rim.position.set(x, 3.83, .375);
+        const rim = new THREE.Mesh(r.glassesRing, glasses);
+        rim.position.set(x * .68, 3.805, .26);
         parent.add(rim);
       }
-      b.box(parent, .10, .022, .025, 0x202938, 0, 3.84, .391);
+      b.box(parent, .070, .012, .012, 0x202938, 0, 3.815, .270);
     }
-    // Helmet dome, crown seam and projecting brim.
-    b.ball(parent, .48, .25, .41, helmetColor, 0, 4.17, -.035, true);
-    b.box(parent, 1.06, .085, .79, helmetColor, 0, 4.045, .085, true);
-    b.box(parent, .055, .018, .43, 0xd8e2eb, 0, 4.401, -.02);
-    b.box(parent, .24, .07, .025, 0xeaf3f6, 0, 4.17, .374);
+    // Curved hardhat shell and rounded projecting visor.
+    b.ball(parent, .37, .20, .32, helmetColor, 0, 4.15, -.025, true);
+    b.ball(parent, .36, .046, .32, helmetColor, 0, 4.057, -.015);
+    b.ball(parent, .32, .025, .17, helmetColor, 0, 4.037, .25);
+    b.ball(parent, .024, .014, .25, 0xe2e8e6, 0, 4.344, -.025);
+    b.ball(parent, .11, .033, .015, 0xeaf3f6, 0, 4.16, .285);
   }
 
   function makeArm(THREE, b, parent, side, jacket, cuff, skin, glove) {
     const shoulder = new THREE.Group();
-    shoulder.position.set(side * .84, 3.18, 0);
+    shoulder.position.set(side * .62, 3.15, 0);
     parent.add(shoulder);
-    b.ball(shoulder, .29, .28, .29, jacket, 0, -.12, 0, true);
-    b.box(shoulder, .42, .63, .43, jacket, 0, -.39, 0, true);
-    b.box(shoulder, .44, .095, .45, cuff, 0, -.66, 0);
+    b.ball(shoulder, .215, .23, .235, jacket, 0, -.105, 0, true);
+    b.taper(shoulder, 1, .82, .195, .62, .21, jacket, 0, -.405, 0, true);
+    b.ball(shoulder, .195, .045, .21, cuff, 0, -.67, 0);
+    b.ball(shoulder, .14, .023, .205, 0x6b8290, 0, -.40, .185); // sleeve fold
     const elbow = new THREE.Group();
-    elbow.position.y = -.70;
+    elbow.position.y = -.715;
     shoulder.add(elbow);
-    b.ball(elbow, .21, .20, .20, jacket, 0, -.03, 0);
-    b.box(elbow, .37, .52, .38, jacket, 0, -.30, 0, true);
-    b.box(elbow, .40, .09, .41, cuff, 0, -.55, 0);
+    b.ball(elbow, .17, .17, .185, jacket, 0, -.02, 0);
+    b.taper(elbow, .91, .72, .19, .52, .205, jacket, 0, -.305, 0, true);
+    b.ball(elbow, .16, .048, .175, cuff, 0, -.55, 0);
     const wrist = new THREE.Group();
-    wrist.position.y = -.60;
+    wrist.position.y = -.59;
     elbow.add(wrist);
-    b.ball(wrist, .155, .17, .16, glove || skin, 0, -.11, .02);
+    const handColor = glove || skin;
+    b.ball(wrist, .13, .145, .105, handColor, 0, -.11, .015);
+    for (let i = 0; i < 3; i++) b.ball(wrist, .028, .10, .035, handColor, (i - 1) * .065, -.235, .055);
+    b.ball(wrist, .050, .095, .055, handColor, -side * .115, -.115, .095); // thumb
     return { shoulder: shoulder, elbow: elbow, wrist: wrist };
   }
 
   function makeLeg(THREE, b, parent, side, trouser, boot, accent) {
     const hip = new THREE.Group();
-    hip.position.set(side * .36, 1.98, 0);
+    hip.position.set(side * .31, 2.02, 0);
     parent.add(hip);
-    b.ball(hip, .30, .25, .29, trouser, 0, -.12, 0);
-    b.box(hip, .48, .71, .51, trouser, 0, -.43, 0, true);
+    b.ball(hip, .27, .24, .27, trouser, 0, -.12, 0);
+    b.taper(hip, 1, .83, .275, .85, .275, trouser, 0, -.485, 0, true);
+    b.ball(hip, .22, .024, .24, 0x53606a, 0, -.63, .225); // trouser fold
     const knee = new THREE.Group();
-    knee.position.y = -.83;
+    knee.position.y = -.91;
     hip.add(knee);
-    b.ball(knee, .23, .22, .25, accent, 0, -.06, .13);
-    b.box(knee, .41, .66, .44, trouser, 0, -.41, 0, true);
-    b.box(knee, .43, .13, .46, accent, 0, -.71, 0);
-    b.box(knee, .46, .27, .52, boot, 0, -.84, .04, true);
-    b.box(knee, .53, .15, .74, boot, 0, -.95, .17, true);
+    b.ball(knee, .235, .18, .245, trouser, 0, -.04, .02);
+    b.ball(knee, .20, .14, .065, accent, 0, -.06, .23);
+    b.taper(knee, .95, .72, .245, .75, .24, trouser, 0, -.44, 0, true);
+    b.ball(knee, .20, .023, .21, 0x53606a, 0, -.48, .205);
+    b.taper(knee, .78, 1, .245, .30, .25, boot, 0, -.86, .015, true);
+    b.ball(knee, .26, .105, .40, boot, 0, -1.01, .15, true);
+    b.ball(knee, .27, .025, .41, 0x111a21, 0, -1.085, .16);
     return { hip: hip, knee: knee };
   }
 
@@ -307,37 +337,39 @@
     root.name = options.name || role;
     const body = new THREE.Group();
     root.add(body);
-    b.box(body, 1.54, 1.38, .66, jacket, 0, 2.63, 0, true);
-    b.box(body, 1.66, .22, .70, jacket, 0, 3.17, 0, true);
-    b.box(body, 1.46, .25, .65, trouser, 0, 1.96, 0, true);
-    b.box(body, 1.52, .13, .73, trim, 0, 2.04, 0);
-    b.box(body, .09, 1.10, .026, 0xcbd4d8, 0, 2.66, .350);
-    b.box(body, 1.54, .11, .045, trim, 0, 2.35, .359);
-    b.box(body, 1.54, .11, .045, trim, 0, 2.35, -.359);
-    b.box(body, .42, .33, .055, jacket, -.48, 2.38, .37);
-    b.box(body, .42, .33, .055, jacket, .48, 2.38, .37);
-    b.box(body, .45, .035, .025, trim, -.48, 2.54, .403);
-    b.box(body, .45, .035, .025, trim, .48, 2.54, .403);
-    b.box(body, .43, .13, .39, jacket, -.34, 3.30, .20);
-    b.box(body, .43, .13, .39, jacket, .34, 3.30, .20);
+    b.ball(body, .56, .26, .30, trouser, 0, 2.05, 0, true); // pelvis
+    b.taper(body, 1, .80, .68, 1.20, .34, jacket, 0, 2.64, 0, true);
+    b.ball(body, .70, .23, .35, jacket, 0, 3.13, 0, true); // upper chest
+    b.ball(body, .34, .09, .16, jacket, -.25, 3.31, .09);
+    b.ball(body, .34, .09, .16, jacket, .25, 3.31, .09);
+    b.ball(body, .48, .10, .30, trim, 0, 2.13, 0); // waist belt
+    b.ball(body, .063, .10, .022, 0xabb9bd, 0, 2.15, .303);
+    b.box(body, .025, .91, .015, 0xb8c7cd, 0, 2.70, .347); // zipper
+    b.box(body, 1.15, .065, .026, trim, 0, 2.35, .354);
+    b.box(body, 1.15, .065, .026, trim, 0, 2.35, -.354);
+    for (const side of [-1, 1]) {
+      b.ball(body, .20, .15, .044, jacket, side * .39, 2.42, .334); // pockets
+      b.box(body, .34, .018, .020, 0x8da1ab, side * .39, 2.49, .379);
+      b.ball(body, .16, .065, .13, jacket, side * .26, 3.27, .16); // soft lapels
+    }
     if (branded) {
       // Each plane faces outwards; the rear plane is rotated, so its writing is never mirrored.
-      b.box(body, 1.19, .51, .018, 0x102b49, 0, 2.91, .365);
-      b.decal(body, 'RISE\nAUTOMATION', 310, null, 1.13, .46, 0, 2.91, .378, false);
-      b.box(body, 1.42, .70, .018, 0x102b49, 0, 2.77, -.365);
-      b.decal(body, 'RISE', 380, null, 1.35, .38, 0, 2.92, -.378, true);
-      b.decal(body, 'AUTOMATION', 265, null, 1.35, .28, 0, 2.63, -.378, true);
-      b.box(body, .20, .19, .035, 0xf97316, -.63, 3.04, .38);
-      b.decal(body, 'R', 205, null, .16, .14, -.63, 3.04, .405, false);
+      b.box(body, 1.06, .49, .018, 0x102b49, 0, 2.91, .367);
+      b.decal(body, 'RISE\nAUTOMATION', 310, null, 1.02, .43, 0, 2.91, .380, false);
+      b.box(body, 1.19, .63, .018, 0x102b49, 0, 2.80, -.367);
+      b.decal(body, 'RISE', 380, null, 1.14, .35, 0, 2.94, -.380, true);
+      b.decal(body, 'AUTOMATION', 265, null, 1.14, .25, 0, 2.66, -.380, true);
+      b.box(body, .15, .14, .029, 0xf97316, -.53, 3.14, .359);
+      b.decal(body, 'R', 205, null, .12, .10, -.53, 3.14, .379, false);
       if (options.name) {
-        b.box(body, .52, .18, .035, 0x152c45, .48, 2.57, .422);
-        b.decal(body, String(options.name), 185, null, .48, .14, .48, 2.57, .447, false);
+        b.box(body, .43, .15, .022, 0x152c45, .39, 2.56, .353);
+        b.decal(body, String(options.name), 185, null, .40, .12, .39, 2.56, .369, false);
       }
     } else {
-      b.box(body, 1.50, .15, .040, 0x919a9c, 0, 2.91, .37);
-      b.box(body, 1.50, .15, .040, 0x919a9c, 0, 2.91, -.37);
-      if (role === 'electrician') b.box(body, .16, .36, .03, 0xebc84a, -.53, 2.85, .40);
-      if (role === 'director') b.box(body, .32, .35, .05, 0xe4e6e5, -.54, 2.88, .41);
+      b.box(body, 1.20, .10, .022, 0x919a9c, 0, 2.91, .367);
+      b.box(body, 1.20, .10, .022, 0x919a9c, 0, 2.91, -.367);
+      if (role === 'electrician') b.box(body, .12, .29, .02, 0xebc84a, -.47, 2.84, .37);
+      if (role === 'director') b.box(body, .26, .27, .03, 0xe4e6e5, -.43, 2.86, .38);
     }
     const variant = faceVariant(options.name, role);
     makeFace(THREE, b, body, skin, role, variant, helmet, r);
