@@ -1,0 +1,251 @@
+/* The available window height belongs to the arena, not to the document. */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body {
+  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0 !important;
+  padding: 8px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+body *, body *::before, body *::after { box-sizing: border-box; }
+.game-header {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 7px 12px;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.game-header > div:first-child { min-width: 0; }
+.game-header > div:first-child > div:last-child { min-width: 0; }
+.game-header p { display: none; }
+.game-header .w-12.h-12 { width: 34px; height: 34px; flex: none; }
+.game-header .w-7.h-7 { width: 20px; height: 20px; }
+.game-header .text-xl { font-size: clamp(14px, 1.7vw, 21px); line-height: 1.15; white-space: nowrap; }
+.game-header > div:last-child { flex: none; gap: 6px; }
+.game-header > div:last-child > div { padding: 4px 7px; gap: 4px; }
+.game-header #btn-audio { padding: 5px; }
+.game-layout {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(255px, 24vw, 340px);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+.game-arena {
+  min-width: 0;
+  min-height: 0;
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.game-status { flex: none; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 8px 10px; gap: 8px; }
+.game-status > div { min-width: 0; }
+.game-status > div > div:first-child { gap: 3px; }
+.game-status > div > div:first-child > span:first-child {
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.game-status .h-3 { height: 8px; }
+.camera-toolbar {
+  flex: none;
+  min-width: 0;
+  padding: 5px 8px;
+  gap: 5px;
+  border-radius: 11px;
+}
+.camera-toolbar select, .camera-toolbar button { min-height: 29px; padding: 4px 7px; }
+.camera-toolbar select { min-width: 110px; max-width: 180px; }
+.camera-toolbar #camera-caption { display: none; }
+#canvas-container {
+  flex: 1 1 auto;
+  min-height: 95px;
+  height: 0;
+  aspect-ratio: auto !important;
+  border-radius: 12px;
+}
+#canvas-container canvas { width: 100%; height: 100%; }
+.viewport-note { padding: 4px 7px; bottom: 6px; left: 6px; font-size: 10px; }
+.distraction-control {
+  flex: none;
+  min-width: 0;
+  padding: 5px 8px;
+  gap: 8px;
+  flex-wrap: nowrap;
+  border-radius: 11px;
+}
+.distraction-control > div:first-child { min-width: 0; }
+.distraction-control > div:first-child > div:first-child { display: none; }
+.distraction-control > div:first-child > div:last-child { min-width: 0; }
+.distraction-control > div:first-child > div:last-child > div { flex-wrap: wrap; gap: 4px; }
+.distraction-control > div:first-child .text-base { font-size: 11px; line-height: 1.1; }
+.distraction-control p { display: none; }
+.distraction-control button { flex: none; padding: 7px 10px; font-size: 11px; line-height: 1.15; }
+.game-sidebar {
+  min-width: 0;
+  min-height: 0;
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.game-tabs { flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.game-tabs button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 3px 2px;
+  border: 1px solid #39536a;
+  border-radius: 9px;
+  background: #1a2c40;
+  color: #bfd0de;
+  font: 700 11px/1.15 'Trebuchet MS', Arial, sans-serif;
+  cursor: pointer;
+}
+.game-tabs button[aria-selected="true"] { color: #fff; border-color: #f59e0b; background: #774521; }
+.game-tabs button:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+.game-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 9px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.game-panel[hidden] { display: none !important; }
+.game-panel > div:last-child { min-height: 0; }
+#panel-abilities > div:last-child { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+#panel-abilities h3, #panel-crew h3, #panel-upgrades h3 { margin: 0; }
+#panel-abilities > div:first-child, #panel-upgrades > div:first-child { margin-bottom: 6px; }
+#panel-abilities button { flex: 1 1 0; min-height: 0; padding: 5px 7px; }
+#panel-abilities button > div:first-child { margin-bottom: 2px; gap: 4px; }
+#panel-abilities button p { line-height: 1.13; }
+#panel-crew > div:last-child { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+#panel-crew > div:last-child > div { flex: 1; min-height: 0; padding: 5px 7px; gap: 4px; }
+#panel-crew > div:last-child > div > div { min-width: 0; }
+#panel-crew > div:last-child > div > span { flex: none; }
+#panel-upgrades > div:last-child { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+#panel-upgrades button { flex: 1; min-height: 0; padding: 7px; gap: 4px; }
+#panel-upgrades button > div { min-width: 0; }
+#panel-upgrades button > span { flex: none; }
+#game-modal { position: fixed; inset: 0; padding: 8px !important; }
+#game-modal > div { max-height: calc(100% - 12px); padding: 14px; overflow: hidden; }
+#modal-content-start > .inline-block, #modal-content-gameover > .inline-block,
+#modal-content-victory > .inline-block { display: none; }
+#modal-content-start > h2, #modal-content-gameover > h2,
+#modal-content-victory > h2 { font-size: 19px; line-height: 1.2; margin-bottom: 8px; }
+#modal-content-start > p, #modal-content-gameover > p,
+#modal-content-victory > p { margin-bottom: 10px; line-height: 1.3; }
+#modal-content-start > div.text-xs { display: none; }
+#game-modal button { padding: 9px 10px; font-size: 14px; line-height: 1.2; }
+#overlay-boss { padding: 5px; }
+#overlay-boss > div { padding: 8px; }
+#overlay-boss .text-3xl { font-size: clamp(14px, 3vw, 24px); line-height: 1.2; }
+#overlay-boss p { display: none; }
+
+@media (max-height: 670px) {
+  .game-header { padding: 4px 8px; }
+  .game-header .w-12.h-12 { width: 28px; height: 28px; }
+  .game-status { padding: 5px 8px; }
+  .game-status .h-3 { height: 6px; }
+  .camera-toolbar { padding: 3px 6px; }
+  .camera-toolbar select, .camera-toolbar button { min-height: 26px; padding: 3px 5px; }
+  .game-panel { padding: 6px; }
+  #panel-abilities > div:first-child, #panel-upgrades > div:first-child { margin-bottom: 3px; }
+  #panel-abilities button { padding: 3px 6px; }
+  #panel-abilities button p { display: none; }
+  #panel-crew > div:last-child { gap: 3px; }
+  #panel-crew > div:last-child > div { padding: 3px 5px; }
+  #panel-crew > div:last-child > div > div > div:last-child { display: none; }
+}
+
+@media (max-width: 699px) {
+  body { padding: 5px !important; gap: 5px; }
+  .game-header { padding: 4px 7px; gap: 4px; }
+  .game-header .w-12.h-12 { display: none; }
+  .game-header .text-xl { font-size: 12px; letter-spacing: 0; }
+  .game-header > div:first-child > div:last-child > div > span:last-child { display: none; }
+  .game-header > div:last-child { gap: 3px; }
+  .game-header > div:last-child > div { padding: 2px 4px; gap: 3px; }
+  .game-header > div:last-child > div span:first-child { display: none; }
+  .game-header > div:last-child .text-base { font-size: 11px; }
+  .game-header #btn-audio { padding: 3px; }
+  .game-header #btn-audio svg { width: 15px; height: 15px; }
+  .game-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) clamp(175px, 32dvh, 230px);
+    gap: 5px;
+  }
+  .game-arena { grid-column: 1; grid-row: 1; gap: 4px; }
+  .game-sidebar { grid-column: 1; grid-row: 2; gap: 4px; }
+  .game-status { padding: 4px 6px; gap: 4px; border-radius: 9px; }
+  .game-status > div > div:first-child { font-size: 10px; }
+  .game-status > div > div:first-child > span:first-child { font-size: 0; }
+  .game-status > div:nth-child(1) > div:first-child > span:first-child::after { content: 'РОБОТ'; font-size: 10px; }
+  .game-status > div:nth-child(2) > div:first-child > span:first-child::after { content: 'ОЧКИ'; font-size: 10px; }
+  .game-status > div:nth-child(3) > div:first-child > span:first-child::after { content: 'ОТВЛЕЧЕНИЕ'; font-size: 9px; }
+  .game-status > div > div:first-child > span:first-child .animate-ping { display: none; }
+  .game-status .h-3 { height: 5px; }
+  .camera-toolbar { gap: 3px; padding: 4px; }
+  .camera-toolbar label { display: none; }
+  .camera-toolbar select { flex: 1 1 100%; max-width: none; min-width: 0; }
+  .camera-toolbar button { flex: 1 1 auto; font-size: 10px; padding: 3px 4px; }
+  #canvas-container { min-height: 85px; }
+  .viewport-note { display: none; }
+  .distraction-control { padding: 3px 5px; }
+  .distraction-control > div:first-child .text-base { display: none; }
+  .distraction-control #badge-distract { white-space: nowrap; }
+  .distraction-control button { flex: 1; justify-content: center; padding: 6px; font-size: 10px; }
+  .distraction-control #distract-btn-label { max-width: 195px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .game-tabs button { min-height: 28px; font-size: 10px; }
+  .game-panel { padding: 5px 6px; }
+  #panel-abilities > div:first-child, #panel-crew > h3, #panel-upgrades > div:first-child h3 { display: none; }
+  #panel-upgrades > div:first-child { justify-content: flex-end; margin-bottom: 3px; }
+  #panel-abilities > div:last-child { gap: 3px; }
+  #panel-abilities button { padding: 2px 6px; }
+  #panel-abilities button > div:first-child { margin: 0; }
+  #panel-abilities button p { display: none; }
+  #panel-abilities button .text-xs { font-size: 11px; }
+  #panel-crew > div:last-child { gap: 2px; }
+  #panel-crew > div:last-child > div { padding: 2px 5px; }
+  #panel-crew > div:last-child > div > div > div:last-child { display: none; }
+  #panel-crew > div:last-child > div > span { font-size: 10px; }
+  #panel-upgrades > div:last-child { gap: 4px; }
+  #panel-upgrades button { padding: 4px 7px; }
+  #panel-upgrades button > div > div:last-child { display: none; }
+  #game-modal > div { width: min(100%, 430px); padding: 10px; }
+  #modal-content-start > p { font-size: 11px; }
+  #modal-content-start > h2 { font-size: 15px; }
+}
+
+@media (max-height: 440px) and (min-width: 700px) {
+  body { padding: 4px !important; gap: 4px; }
+  .game-header .w-12.h-12 { display: none; }
+  .game-header .text-xl { font-size: 14px; }
+  .game-layout { gap: 5px; }
+  .game-arena { gap: 4px; }
+  .game-status { padding: 4px; }
+  .camera-toolbar { gap: 3px; }
+  .camera-toolbar label { display: none; }
+  .camera-toolbar #camera-reset, .camera-toolbar #camera-caption { display: none; }
+  .distraction-control > div:first-child { display: none; }
+  .distraction-control button { width: 100%; justify-content: center; }
+  .game-tabs button { min-height: 28px; }
+  #panel-abilities > div:first-child, #panel-crew > h3, #panel-upgrades > div:first-child h3 { display: none; }
+  #panel-upgrades > div:first-child { justify-content: flex-end; margin-bottom: 3px; }
+  #panel-abilities > div:last-child { gap: 3px; }
+  #panel-abilities button { padding: 2px 5px; }
+  #panel-crew > div:last-child > div > div > div:last-child,
+  #panel-upgrades button > div > div:last-child { display: none; }
+  #game-modal > div { padding: 8px; }
+  #modal-content-start > p { font-size: 10px; margin-bottom: 6px; }
+}
