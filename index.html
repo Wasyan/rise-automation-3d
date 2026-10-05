@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rise Automation: Защита Робота 3D</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261005">
   <script src="three.min.js"></script>
-  <script src="characters.js"></script>
-  <script src="robot.js"></script>
+  <script src="characters.js?v=20261005"></script>
+  <script src="robot.js?v=20261005"></script>
   <script src="workshop.js"></script>
   <script>
     if (typeof THREE === 'undefined') {
@@ -99,11 +99,12 @@
       #game-modal > div { max-height: 100%; overflow-y: auto; padding: 16px; }
     }
   </style>
+  <link rel="stylesheet" href="layout.css?v=20261005">
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-start p-2 sm:p-4">
 
   <!-- Header & Rise Automation Brand Bar -->
-  <header class="w-full max-w-6xl mb-3 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 rounded-2xl px-5 py-3 shadow-xl backdrop-blur-md">
+  <header class="game-header w-full max-w-6xl mb-3 flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 rounded-2xl px-5 py-3 shadow-xl backdrop-blur-md">
     <div class="flex items-center gap-3">
       <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-700 flex items-center justify-center shadow-lg shadow-orange-500/30 border border-orange-400/40">
         <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
@@ -146,13 +147,13 @@
   </header>
 
   <!-- Main Game Container -->
-  <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+  <main class="game-layout w-full max-w-6xl grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
     
     <!-- Left / Center: Interactive 3D Arena (3 cols on large) -->
-    <div class="lg:col-span-3 flex flex-col gap-3">
+    <div class="game-arena lg:col-span-3 flex flex-col gap-3">
       
       <!-- Top Status Bars -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3 shadow-lg">
+      <div class="game-status grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3 shadow-lg">
         <!-- Robot Integrity -->
         <div class="flex flex-col gap-1">
           <div class="flex justify-between items-center text-xs font-mono">
@@ -307,7 +308,7 @@
       </div>
 
       <!-- Distraction Control Bar -->
-      <div class="bg-gradient-to-r from-slate-900 via-purple-950/40 to-slate-900 border border-purple-800/40 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div class="distraction-control bg-gradient-to-r from-slate-900 via-purple-950/40 to-slate-900 border border-purple-800/40 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300 font-tech font-bold text-xl">
             💻
@@ -323,19 +324,24 @@
           </div>
         </div>
 
-        <button id="btn-toggle-distract" class="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-tech font-black tracking-wider shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 transform active:scale-95">
+        <button id="btn-toggle-distract" title="Отвлечь монтажников на код-ревью" class="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-tech font-black tracking-wider shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 transform active:scale-95">
           <span id="distract-btn-icon">💬</span>
-          <span id="distract-btn-label">ОТВЛЕЧЬ МОНТАЖНИКОВ НА КОД-РЕВЬЮ!</span>
+          <span id="distract-btn-label">ОТВЛЕЧЬ БРИГАДУ</span>
         </button>
       </div>
 
     </div>
 
     <!-- Right Column: Super Abilities, Team Status & Field Guide -->
-    <div class="flex flex-col gap-3">
+    <aside class="game-sidebar flex flex-col gap-3" aria-label="Управление игрой">
+      <div class="game-tabs" role="tablist" aria-label="Панели управления">
+        <button type="button" id="tab-abilities" role="tab" aria-controls="panel-abilities" aria-selected="true" tabindex="0">⚡ Способности</button>
+        <button type="button" id="tab-crew" role="tab" aria-controls="panel-crew" aria-selected="false" tabindex="-1">👷 Бригада</button>
+        <button type="button" id="tab-upgrades" role="tab" aria-controls="panel-upgrades" aria-selected="false" tabindex="-1">⚙️ Улучшения</button>
+      </div>
 
       <!-- Super Abilities Deck (With Andrey Cooldown) -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+      <div id="panel-abilities" class="game-panel bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl" role="tabpanel" aria-labelledby="tab-abilities">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-tech text-sm font-bold text-amber-400 flex items-center gap-2">
             <span>⚡</span> СУПЕРСПОСОБНОСТИ
@@ -345,7 +351,7 @@
 
         <div class="flex flex-col gap-2">
           <!-- Ability 1: Hotfix -->
-          <button id="btn-skill-1" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
+          <button id="btn-skill-1" title="Оглушает всех рабочих на 6 секунд ошибками 404" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
             <div class="flex justify-between items-center mb-1">
               <span class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">1. Срочный Хотфикс в Прод</span>
               <span class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">120 pts</span>
@@ -354,7 +360,7 @@
           </button>
 
           <!-- Ability 2: Andrey with Cooldown -->
-          <button id="btn-skill-andrey" class="w-full text-left p-2.5 rounded-xl bg-gradient-to-r from-indigo-950/70 to-purple-950/50 hover:from-indigo-900/70 hover:to-purple-900/70 border border-indigo-700/60 hover:border-indigo-400 transition-all disabled:opacity-40 disabled:pointer-events-none group relative overflow-hidden">
+          <button id="btn-skill-andrey" title="Андрей уводит рабочих на 15 секунд; перезарядка 25 секунд. Боссы не реагируют" class="w-full text-left p-2.5 rounded-xl bg-gradient-to-r from-indigo-950/70 to-purple-950/50 hover:from-indigo-900/70 hover:to-purple-900/70 border border-indigo-700/60 hover:border-indigo-400 transition-all disabled:opacity-40 disabled:pointer-events-none group relative overflow-hidden">
             <div class="flex justify-between items-center mb-1">
               <span class="font-bold text-xs text-indigo-300 group-hover:text-indigo-200 transition-colors flex items-center gap-1.5">
                 <span>🤝</span> 2. Призвать Андрея
@@ -368,7 +374,7 @@
           </button>
 
           <!-- Ability 3: Safety Siren -->
-          <button id="btn-skill-2" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
+          <button id="btn-skill-2" title="Эвакуация по громкой связи: половина рабочих убегает" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
             <div class="flex justify-between items-center mb-1">
               <span class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">3. Сирена Охраны Труда</span>
               <span class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">260 pts</span>
@@ -377,7 +383,7 @@
           </button>
 
           <!-- Ability 4: Robot Pulse -->
-          <button id="btn-skill-3" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
+          <button id="btn-skill-3" title="Робот выпускает круговой импульс автоматизации и сметает рабочих" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
             <div class="flex justify-between items-center mb-1">
               <span class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">4. Разгон Робота Rise</span>
               <span class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">350 pts</span>
@@ -386,7 +392,7 @@
           </button>
 
           <!-- Ability 5: Signed Acceptance Act -->
-          <button id="btn-skill-4" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
+          <button id="btn-skill-4" title="Сносит 45% здоровья технике босса и глушит её на 7 секунд" class="w-full text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none group">
             <div class="flex justify-between items-center mb-1">
               <span class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">5. Акт Приемки с Печатью</span>
               <span class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">450 pts</span>
@@ -397,7 +403,7 @@
       </div>
 
       <!-- Rise Automation Team Status -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+      <div id="panel-crew" class="game-panel bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl" role="tabpanel" aria-labelledby="tab-crew" hidden>
         <h3 class="font-tech text-xs font-bold text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
           <span>👷‍♂️</span> Бригада Rise Automation
         </h3>
@@ -445,7 +451,7 @@
       </div>
 
       <!-- Quick Upgrades / Shop -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+      <div id="panel-upgrades" class="game-panel bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl" role="tabpanel" aria-labelledby="tab-upgrades" hidden>
         <div class="flex items-center justify-between mb-2">
           <h3 class="font-tech text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
             <span>⚙️</span> Улучшения Цеха
@@ -453,7 +459,7 @@
           <span id="ui-funds" class="font-mono text-xs text-emerald-400 font-bold">💰 100 руб</span>
         </div>
         <div class="space-y-1.5">
-          <button id="btn-upg-drill" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
+          <button id="btn-upg-drill" title="Увеличивает скорость бурения Данила на 50%" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
             <div>
               <div class="font-bold text-slate-200">Турбо-бур Данила</div>
               <div class="text-[10px] text-slate-400">+50% скорость бурения</div>
@@ -461,7 +467,7 @@
             <span id="cost-upg-drill" class="font-mono text-[11px] text-emerald-400 font-bold">100 руб</span>
           </button>
 
-          <button id="btn-upg-fence" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
+          <button id="btn-upg-fence" title="Увеличивает прочность заборов на 60%" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
             <div>
               <div class="font-bold text-slate-200">Усиленный профиль заборов</div>
               <div class="text-[10px] text-slate-400">+60% прочность заборов</div>
@@ -469,7 +475,7 @@
             <span id="cost-upg-fence" class="font-mono text-[11px] text-emerald-400 font-bold">120 руб</span>
           </button>
 
-          <button id="btn-upg-coffee" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
+          <button id="btn-upg-coffee" title="Увеличивает накопление супер-очков на 40%" class="w-full text-left p-2 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs flex justify-between items-center transition-colors disabled:opacity-40">
             <div>
               <div class="font-bold text-slate-200">Кофемашина для Ильи и Васи</div>
               <div class="text-[10px] text-slate-400">+40% к супер-очкам</div>
@@ -479,9 +485,38 @@
         </div>
       </div>
 
-    </div>
+    </aside>
 
   </main>
+
+  <script>
+    // A single panel is visible at a time; the game keeps updating all panel data.
+    (() => {
+      const tabs = Array.from(document.querySelectorAll('.game-tabs [role="tab"]'));
+      const activate = (tab, focus = false) => {
+        tabs.forEach(item => {
+          const selected = item === tab;
+          item.setAttribute('aria-selected', String(selected));
+          item.tabIndex = selected ? 0 : -1;
+          document.getElementById(item.getAttribute('aria-controls')).hidden = !selected;
+        });
+        if (focus) tab.focus();
+      };
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => activate(tab));
+        tab.addEventListener('keydown', event => {
+          let next = index;
+          if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+          else if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+          else if (event.key === 'Home') next = 0;
+          else if (event.key === 'End') next = tabs.length - 1;
+          else return;
+          event.preventDefault();
+          activate(tabs[next], true);
+        });
+      });
+    })();
+  </script>
 
   <!-- Complete 3D Engine & Game Logic Script -->
   <script>
@@ -634,7 +669,9 @@
     camera.lookAt(0, 0, 2);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setSize(container.clientWidth, container.clientHeight, false);
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -643,13 +680,18 @@
     renderer.toneMappingExposure = 1.12;
     container.appendChild(renderer.domElement);
 
-    // Resize handler
-    window.addEventListener('resize', () => {
-      if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
+    // CSS grid can resize the arena without a window resize (for example when
+    // the browser toolbar changes height), so observe the actual canvas frame.
+    function resizeArena() {
+      const width = Math.max(1, container.clientWidth);
+      const height = Math.max(1, container.clientHeight);
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-    });
+      renderer.setSize(width, height, false);
+    }
+    if ('ResizeObserver' in window) new ResizeObserver(resizeArena).observe(container);
+    window.addEventListener('resize', resizeArena);
+    resizeArena();
 
     // Factory Floor Lighting
     const ambientLight = new THREE.HemisphereLight(0xd6eaff, 0x617080, 0.9);
@@ -1722,6 +1764,7 @@
         barAndrey.style.width = "0%";
         btnAndrey.disabled = state.superPoints < 180;
       }
+      btnAndrey.title = `${document.getElementById('label-andrey-desc').textContent.trim()} ${badgeAndrey.textContent.trim()}`;
 
       // Super Points Bar
       const pct = Math.min(100, (state.superPoints / state.superPointsMax) * 100);
@@ -1884,12 +1927,14 @@
       if (inspectionModel) {
         const robot = cameraView.focus === 'robot';
         const angle = cameraView.side + (robot ? 0.35 : 0.16);
-        const distance = (robot ? 24 : container.clientWidth < 600 ? 8.8 : 7.5) * cameraView.zoom;
+        const portraitFactor = Math.max(1, 1.4 / camera.aspect);
+        const distance = (robot ? 24 : container.clientWidth < 600 ? 8.8 : 7.5) * cameraView.zoom * portraitFactor;
         cameraTarget.set(robot ? -1 : 0, robot ? 6 : 2.25, 0);
-        camera.position.set(cameraTarget.x + Math.sin(angle) * distance, robot ? 13 : 4.15, cameraTarget.z + Math.cos(angle) * distance);
+        camera.position.set(cameraTarget.x + Math.sin(angle) * distance, (robot ? 13 : 4.15) * portraitFactor, cameraTarget.z + Math.cos(angle) * distance);
       } else {
         cameraTarget.set(0, 0, 2);
-        camera.position.set(0, 48 * cameraView.zoom, 52 * cameraView.zoom);
+        const portraitFactor = Math.max(1, 1.4 / camera.aspect);
+        camera.position.set(0, 48 * cameraView.zoom * portraitFactor, 52 * cameraView.zoom * portraitFactor);
       }
       if (state.screenShake > 0 && !state.paused) {
         camera.position.x += (Math.random() - 0.5) * state.screenShake * 0.2;
@@ -2121,13 +2166,15 @@
       if (state.isDistracted) {
         badge.innerText = "АКТИВНО: НАБОР ОЧКОВ";
         badge.className = "px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse";
-        label.innerText = "ВЕРНУТЬ МОНТАЖНИКОВ НА ОБЪЕКТ!";
+        label.innerText = "ВЕРНУТЬ К РАБОТЕ";
+        btnDistract.title = "Вернуть монтажников на объект";
         btnDistract.className = "px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-slate-950 font-tech font-black tracking-wider shadow-lg shadow-amber-600/30 transition-all flex items-center gap-2 transform active:scale-95";
         sfx.playChatter();
       } else {
         badge.innerText = "ОТКЛЮЧЕНО";
         badge.className = "px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700";
-        label.innerText = "ОТВЛЕЧЬ МОНТАЖНИКОВ НА КОД-РЕВЬЮ!";
+        label.innerText = "ОТВЛЕЧЬ БРИГАДУ";
+        btnDistract.title = "Отвлечь монтажников на код-ревью";
         btnDistract.className = "px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-tech font-black tracking-wider shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 transform active:scale-95";
       }
       updateUIStatus();
@@ -2148,6 +2195,7 @@
         state.costDrill = Math.floor(state.costDrill * 1.5);
         document.getElementById('cost-upg-drill').innerText = `${state.costDrill} руб`;
         sfx.playClank();
+        updateUIStatus();
       }
     });
 
@@ -2159,6 +2207,7 @@
         state.costFence = Math.floor(state.costFence * 1.5);
         document.getElementById('cost-upg-fence').innerText = `${state.costFence} руб`;
         sfx.playClank();
+        updateUIStatus();
       }
     });
 
@@ -2169,6 +2218,7 @@
         state.costCoffee = Math.floor(state.costCoffee * 1.5);
         document.getElementById('cost-upg-coffee').innerText = `${state.costCoffee} руб`;
         sfx.playClank();
+        updateUIStatus();
       }
     });
 
